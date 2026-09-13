@@ -7,6 +7,7 @@ import { LockProvider, useLock } from "./state/LockContext";
 import { LockScreen } from "./components/LockScreen";
 import { Layout } from "./components/Layout";
 import { Dashboard } from "./pages/Dashboard";
+import { Analyse } from "./pages/Analyse";
 import { Comptes } from "./pages/Comptes";
 import { Transactions } from "./pages/Transactions";
 import { ChargesFixes } from "./pages/ChargesFixes";
@@ -58,6 +59,7 @@ export default function App() {
                   <Routes>
                     <Route element={<Layout />}>
                       <Route index element={<Dashboard />} />
+                      <Route path="analyse" element={<Analyse />} />
                       <Route path="comptes" element={<Comptes />} />
                       <Route path="transactions" element={<Transactions />} />
                       <Route path="charges" element={<ChargesFixes />} />

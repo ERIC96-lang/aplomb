@@ -14,6 +14,7 @@ interface Item {
 
 const PAGES: { label: string; path: string; icon: IconName }[] = [
   { label: "Tableau de bord", path: "/", icon: "dashboard" },
+  { label: "Analyse", path: "/analyse", icon: "bulb" },
   { label: "Comptes", path: "/comptes", icon: "bank" },
   { label: "Transactions", path: "/transactions", icon: "card" },
   { label: "Charges fixes", path: "/charges", icon: "repeat" },

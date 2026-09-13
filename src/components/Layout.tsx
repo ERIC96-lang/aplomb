@@ -14,6 +14,7 @@ import { UpdateBanner } from "./UpdateBanner";
 
 const NAV: { to: string; ico: IconName; label: string; end?: boolean; badge?: string }[] = [
   { to: "/", ico: "dashboard", label: "Tableau de bord", end: true },
+  { to: "/analyse", ico: "bulb", label: "Analyse" },
   { to: "/comptes", ico: "bank", label: "Comptes" },
   { to: "/transactions", ico: "card", label: "Transactions" },
   { to: "/charges", ico: "repeat", label: "Charges fixes", badge: "charges" },

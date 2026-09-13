@@ -10,6 +10,10 @@ import {
 } from "../lib/calculs";
 import { projeterFinDeMois } from "../lib/projection";
 import { statutsBudgets } from "../lib/budgets";
+import { genererInsights } from "../lib/insights";
+import { InsightRow } from "../components/Insights";
+import { Icon } from "../components/Icon";
+import { Link } from "react-router-dom";
 import {
   depensesParJour,
   pointsFluxMensuel,
@@ -28,7 +32,7 @@ import {
 } from "../components/charts";
 
 export function Dashboard() {
-  const { comptes, transactions, categories, chargesFixes, echeances, budgets } = useAppData();
+  const { comptes, transactions, categories, chargesFixes, echeances, budgets, objectifs, suggestions } = useAppData();
   const [mois, setMois] = useState(moisCourant());
   const [compteId, setCompteId] = useState<number | "global">("global");
   const [courbe, setCourbe] = useState<"mois" | "jour">("mois");
@@ -107,6 +111,15 @@ export function Dashboard() {
   const budgetsStatut = useMemo(
     () => statutsBudgets(budgets, categories, transactions, mois),
     [budgets, categories, transactions, mois]
+  );
+
+  const insights = useMemo(
+    () =>
+      genererInsights(
+        { comptes, transactions, categories, chargesFixes, echeances, budgets, objectifs, suggestions },
+        mois
+      ),
+    [comptes, transactions, categories, chargesFixes, echeances, budgets, objectifs, suggestions, mois]
   );
 
   const chargesMois = useMemo(() => {
@@ -189,6 +202,28 @@ export function Dashboard() {
           delta={delta(totaux.solde, totauxPrec.solde)}
         />
       </div>
+
+      {/* Points clés (Analyse) */}
+      {insights.length > 0 && (
+        <div className="card" style={{ marginBottom: 18 }}>
+          <div className="flex-between" style={{ marginBottom: 12 }}>
+            <h2 style={{ margin: 0 }}>
+              <span className="flex" style={{ gap: 8 }}>
+                <span style={{ color: "var(--accent)" }}><Icon name="bulb" size={18} /></span>
+                Points clés
+              </span>
+            </h2>
+            {insights.length > 3 && (
+              <Link to="/analyse" className="btn sm">Tout voir ({insights.length})</Link>
+            )}
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {insights.slice(0, 3).map((i) => (
+              <InsightRow key={i.id} insight={i} />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Courbe de solde + jauge */}
       <div className="grid" style={{ gridTemplateColumns: "1fr 320px", marginBottom: 18 }}>
