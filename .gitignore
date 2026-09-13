@@ -1,0 +1,15 @@
+# dépendances
+node_modules
+# build front
+dist
+dist-ssr
+# build Rust / Tauri
+src-tauri/target
+# logs & divers
+*.log
+.DS_Store
+.vite
+# clé privée de signature des mises à jour — NE JAMAIS COMMITTER
+.tauri/*.key
+# artefacts de release (installeur + latest.json à téléverser)
+release
