@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from "react-router-dom";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { getVersion } from "@tauri-apps/api/app";
 import { useAppData } from "../state/AppDataContext";
 import { useTheme } from "../state/ThemeContext";
 import { useLock } from "../state/LockContext";
@@ -31,6 +32,10 @@ export function Layout() {
   const { echeances, transactions, suggestions, budgets, categories } = useAppData();
   const { theme, toggle } = useTheme();
   const { pinDefini, verrouiller } = useLock();
+  const [version, setVersion] = useState("");
+  useEffect(() => {
+    getVersion().then(setVersion).catch(() => {});
+  }, []);
 
   const badges = useMemo(() => {
     const mois = moisCourant();
@@ -75,6 +80,11 @@ export function Layout() {
           );
         })}
         <div className="sidebar-foot">
+          {version && (
+            <div style={{ textAlign: "center", fontSize: 11, color: "var(--text-dim)" }}>
+              version {version}
+            </div>
+          )}
           {pinDefini && (
             <button className="theme-toggle" onClick={verrouiller}>
               <Icon name="lock" size={16} />
