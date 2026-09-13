@@ -350,9 +350,10 @@ export function Parametres() {
       <div className="card" style={{ marginTop: 20 }}>
         <h2>Sauvegarde & restauration de la base</h2>
         <p className="muted" style={{ fontSize: 13, marginTop: -8 }}>
-          Crée une copie complète et cohérente de ta base (une sauvegarde automatique
-          est aussi faite une fois par jour au lancement, les 15 dernières sont conservées).
-          La restauration remplace tes données actuelles par une sauvegarde choisie.
+          Crée une copie complète et <strong>chiffrée</strong> de ta base (AES-256, clé dans le
+          trousseau Windows) — sûre à copier sur une clé USB ou le cloud. Une sauvegarde
+          automatique est aussi faite une fois par jour (15 dernières conservées). La
+          restauration remplace tes données actuelles par une sauvegarde choisie, au prochain lancement.
         </p>
         <div className="flex" style={{ gap: 10, flexWrap: "wrap" }}>
           <button

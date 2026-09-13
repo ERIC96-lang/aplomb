@@ -191,6 +191,77 @@ async fn hello_verifier(message: String) -> bool {
     }
 }
 
+// --- Chiffrement des sauvegardes (AES-256-GCM, clé dans le trousseau Windows) ---
+mod crypto {
+    use aes_gcm::aead::{Aead, KeyInit};
+    use aes_gcm::{Aes256Gcm, Nonce};
+    use base64::{engine::general_purpose::STANDARD, Engine};
+    use rand::rngs::OsRng;
+    use rand::RngCore;
+
+    const SERVICE: &str = "com.eric.budgetperso";
+    const COMPTE: &str = "backup-key";
+
+    fn cle() -> Result<[u8; 32], String> {
+        let entry = keyring::Entry::new(SERVICE, COMPTE).map_err(|e| e.to_string())?;
+        match entry.get_password() {
+            Ok(b64) => {
+                let v = STANDARD.decode(b64).map_err(|e| e.to_string())?;
+                if v.len() != 32 {
+                    return Err("clé de sauvegarde invalide".into());
+                }
+                let mut k = [0u8; 32];
+                k.copy_from_slice(&v);
+                Ok(k)
+            }
+            Err(_) => {
+                let mut k = [0u8; 32];
+                OsRng.fill_bytes(&mut k);
+                entry.set_password(&STANDARD.encode(k)).map_err(|e| e.to_string())?;
+                Ok(k)
+            }
+        }
+    }
+
+    pub fn chiffrer(source: &str, dest: &str) -> Result<(), String> {
+        let data = std::fs::read(source).map_err(|e| e.to_string())?;
+        let cipher = Aes256Gcm::new_from_slice(&cle()?).map_err(|e| e.to_string())?;
+        let mut nonce = [0u8; 12];
+        OsRng.fill_bytes(&mut nonce);
+        let ct = cipher
+            .encrypt(Nonce::from_slice(&nonce), data.as_ref())
+            .map_err(|e| e.to_string())?;
+        let mut out = nonce.to_vec();
+        out.extend(ct);
+        std::fs::write(dest, out).map_err(|e| e.to_string())?;
+        Ok(())
+    }
+
+    pub fn dechiffrer(source: &str, dest: &str) -> Result<(), String> {
+        let blob = std::fs::read(source).map_err(|e| e.to_string())?;
+        if blob.len() < 13 {
+            return Err("fichier chiffré invalide".into());
+        }
+        let (nonce, ct) = blob.split_at(12);
+        let cipher = Aes256Gcm::new_from_slice(&cle()?).map_err(|e| e.to_string())?;
+        let pt = cipher
+            .decrypt(Nonce::from_slice(nonce), ct)
+            .map_err(|_| "déchiffrement impossible (mauvaise clé ou fichier corrompu)".to_string())?;
+        std::fs::write(dest, pt).map_err(|e| e.to_string())?;
+        Ok(())
+    }
+}
+
+#[tauri::command]
+fn chiffrer_fichier(source: String, dest: String) -> Result<(), String> {
+    crypto::chiffrer(&source, &dest)
+}
+
+#[tauri::command]
+fn dechiffrer_fichier(source: String, dest: String) -> Result<(), String> {
+    crypto::dechiffrer(&source, &dest)
+}
+
 /// Ouvre un dossier (ou un fichier) dans l'explorateur système.
 /// Fiable sous Windows : passe par `explorer.exe` avec un chemin normalisé en
 /// antislashs, contrairement au plugin opener qui échoue sur les « / ».
@@ -300,7 +371,9 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             hello_disponible,
             hello_verifier,
-            ouvrir_chemin
+            ouvrir_chemin,
+            chiffrer_fichier,
+            dechiffrer_fichier
         ])
         .run(tauri::generate_context!())
         .expect("erreur au lancement de l'application Tauri");

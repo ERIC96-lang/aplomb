@@ -21,15 +21,32 @@ async function ouvrirChemin(chemin: string): Promise<void> {
 
 const MAX_SAUVEGARDES = 15;
 
-/** Crée une sauvegarde cohérente de la base dans `sauvegardes/`. Renvoie le nom du fichier. */
+/**
+ * Crée une sauvegarde **chiffrée** (AES-256-GCM, clé dans le trousseau Windows)
+ * dans `sauvegardes/`. On produit d'abord une copie cohérente (VACUUM INTO),
+ * qu'on chiffre puis on supprime la version en clair. Renvoie le nom du fichier.
+ */
 export async function creerSauvegarde(): Promise<string> {
   const base = await appDataDir();
   if (!(await exists("sauvegardes", { baseDir: BaseDirectory.AppData }))) {
     await mkdir("sauvegardes", { baseDir: BaseDirectory.AppData, recursive: true });
   }
-  const nom = `budget-${format(new Date(), "yyyyMMdd-HHmmss")}.db`;
-  const abs = await join(base, "sauvegardes", nom);
-  await sauvegarderBaseVers(abs);
+  const horodatage = format(new Date(), "yyyyMMdd-HHmmss");
+  const tmpRel = `sauvegardes/.tmp-${horodatage}.db`;
+  const tmpAbs = await join(base, tmpRel);
+  const nom = `budget-${horodatage}.db.enc`;
+  const absEnc = await join(base, "sauvegardes", nom);
+  try {
+    await sauvegarderBaseVers(tmpAbs); // copie en clair temporaire
+    await invoke("chiffrer_fichier", { source: tmpAbs, dest: absEnc });
+  } finally {
+    // on retire toujours la copie en clair
+    try {
+      await remove(tmpRel, { baseDir: BaseDirectory.AppData });
+    } catch {
+      /* ignore */
+    }
+  }
   await purgerVieillesSauvegardes();
   return nom;
 }
@@ -38,7 +55,7 @@ async function purgerVieillesSauvegardes(): Promise<void> {
   try {
     const entries = await readDir("sauvegardes", { baseDir: BaseDirectory.AppData });
     const dbs = entries
-      .filter((e) => e.isFile && e.name.endsWith(".db"))
+      .filter((e) => e.isFile && e.name.endsWith(".db.enc"))
       .map((e) => e.name)
       .sort(); // noms horodatés -> ordre chronologique
     const aSupprimer = dbs.slice(0, Math.max(0, dbs.length - MAX_SAUVEGARDES));
@@ -75,10 +92,20 @@ export async function ouvrirDossierSauvegardes(): Promise<void> {
 export async function preparerRestauration(): Promise<boolean> {
   const sel = await open({
     multiple: false,
-    filters: [{ name: "Sauvegarde Budget Perso", extensions: ["db"] }],
+    filters: [
+      { name: "Sauvegarde chiffrée", extensions: ["enc"] },
+      { name: "Sauvegarde (non chiffrée)", extensions: ["db"] },
+    ],
   });
   if (!sel || typeof sel !== "string") return false;
-  await copyFile(sel, "restore.pending", { toPathBaseDir: BaseDirectory.AppData });
+  const base = await appDataDir();
+  const destAbs = await join(base, "restore.pending");
+  if (sel.toLowerCase().endsWith(".enc")) {
+    // déchiffre la sauvegarde vers la base de restauration en attente
+    await invoke("dechiffrer_fichier", { source: sel, dest: destAbs });
+  } else {
+    await copyFile(sel, "restore.pending", { toPathBaseDir: BaseDirectory.AppData });
+  }
   return true;
 }
 
