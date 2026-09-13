@@ -8,24 +8,61 @@ import {
 } from "date-fns";
 import { fr } from "date-fns/locale";
 import type { Compte, Transaction } from "../db/types";
-import { soldeCompteAvecInitial, soldeGlobal, totauxMois } from "./calculs";
-
-function soldeALaDate(
-  comptes: Compte[],
-  transactions: Transaction[],
-  compteId: number | null,
-  dateIso: string
-): number {
-  const jusque = transactions.filter((t) => t.date <= dateIso);
-  if (compteId == null) return soldeGlobal(comptes, jusque);
-  const c = comptes.find((x) => x.id === compteId);
-  return c ? soldeCompteAvecInitial(c, jusque) : 0;
-}
+import { totauxMois } from "./calculs";
 
 export interface PointSolde {
   key: string;
   label: string;
   solde: number;
+}
+
+/** Effet d'une transaction sur le solde global (les virements sont neutres). */
+function deltaGlobal(t: Transaction): number {
+  if (t.type === "revenu") return t.montant;
+  if (t.type === "depense") return -t.montant;
+  return 0; // virement : neutre au global
+}
+
+/** Effet d'une transaction sur le solde d'un compte donné. */
+function deltaCompte(t: Transaction, compteId: number): number {
+  if (t.type === "revenu" && t.compte_id === compteId) return t.montant;
+  if (t.type === "depense" && t.compte_id === compteId) return -t.montant;
+  if (t.type === "virement") {
+    if (t.compte_id === compteId) return -t.montant;
+    if (t.compte_dest_id === compteId) return t.montant;
+  }
+  return 0;
+}
+
+/**
+ * Soldes cumulés à une série de dates, en UN SEUL passage (O(n log n) tri +
+ * O(n + points)) au lieu de re-filtrer toutes les transactions à chaque point.
+ * `datesIso` doit être trié croissant.
+ */
+function soldesAuxDates(
+  comptes: Compte[],
+  transactions: Transaction[],
+  compteId: number | null,
+  datesIso: string[]
+): number[] {
+  let solde =
+    compteId == null
+      ? comptes.reduce((a, c) => a + c.solde_initial, 0)
+      : comptes.find((c) => c.id === compteId)?.solde_initial ?? 0;
+  const delta = (t: Transaction) =>
+    compteId == null ? deltaGlobal(t) : deltaCompte(t, compteId);
+
+  const tri = [...transactions].sort((a, b) => a.date.localeCompare(b.date));
+  const res: number[] = [];
+  let i = 0;
+  for (const dateIso of datesIso) {
+    while (i < tri.length && tri[i].date <= dateIso) {
+      solde += delta(tri[i]);
+      i++;
+    }
+    res.push(solde);
+  }
+  return res;
 }
 
 /** Solde de fin de mois sur les `nbMois` derniers mois (courbe de tendance). */
@@ -36,17 +73,17 @@ export function pointsSoldeMensuel(
   nbMois = 12
 ): PointSolde[] {
   const now = new Date();
-  const pts: PointSolde[] = [];
+  const bornes: { key: string; label: string; iso: string }[] = [];
   for (let i = nbMois - 1; i >= 0; i--) {
     const d = endOfMonth(addMonths(now, -i));
-    const iso = format(d, "yyyy-MM-dd");
-    pts.push({
+    bornes.push({
       key: format(d, "yyyy-MM"),
       label: format(d, "MMM", { locale: fr }),
-      solde: soldeALaDate(comptes, transactions, compteId, iso),
+      iso: format(d, "yyyy-MM-dd"),
     });
   }
-  return pts;
+  const soldes = soldesAuxDates(comptes, transactions, compteId, bornes.map((b) => b.iso));
+  return bornes.map((b, k) => ({ key: b.key, label: b.label, solde: soldes[k] }));
 }
 
 /** Solde jour par jour sur un mois 'YYYY-MM'. */
@@ -58,14 +95,10 @@ export function pointsSoldeJournalier(
 ): PointSolde[] {
   const start = startOfMonth(parseISO(`${mois}-01`));
   const end = endOfMonth(start);
-  return eachDayOfInterval({ start, end }).map((d) => {
-    const iso = format(d, "yyyy-MM-dd");
-    return {
-      key: iso,
-      label: String(d.getDate()),
-      solde: soldeALaDate(comptes, transactions, compteId, iso),
-    };
-  });
+  const jours = eachDayOfInterval({ start, end });
+  const isos = jours.map((d) => format(d, "yyyy-MM-dd"));
+  const soldes = soldesAuxDates(comptes, transactions, compteId, isos);
+  return jours.map((d, k) => ({ key: isos[k], label: String(d.getDate()), solde: soldes[k] }));
 }
 
 export interface PointFlux {

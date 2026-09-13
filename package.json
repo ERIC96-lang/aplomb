@@ -11,6 +11,8 @@
     "tauri": "tauri",
     "app:dev": "tauri dev",
     "app:build": "tauri build",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "release:prepare": "node scripts/preparer-release.mjs",
     "icons": "tauri icon src-tauri/icon-source.png"
   },
@@ -37,6 +39,7 @@
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.4",
     "typescript": "^5.6.3",
-    "vite": "^6.0.3"
+    "vite": "^6.0.3",
+    "vitest": "^5.0.0"
   }
 }
