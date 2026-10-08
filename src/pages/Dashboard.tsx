@@ -145,6 +145,7 @@ export function Dashboard() {
       en_retard: n("en_retard"),
       payee_sans_justif: n("payee_sans_justif"),
       payee_avec_justif: n("payee_avec_justif"),
+      reglee_ailleurs: n("reglee_ailleurs"),
     };
   }, [echeances, mois]);
 
@@ -156,8 +157,8 @@ export function Dashboard() {
   const estMoisCourant = mois === moisCourant();
   const plan = useMemo(
     () =>
-      planDuMois({ transactions, chargesFixes, budgets, categories, profil: lireProfil() }, mois),
-    [transactions, chargesFixes, budgets, categories, mois]
+      planDuMois({ transactions, chargesFixes, budgets, categories, profil: lireProfil(), echeances }, mois),
+    [transactions, chargesFixes, budgets, categories, mois, echeances]
   );
 
   // --- Sections personnalisables du tableau de bord -----------------------
@@ -427,6 +428,11 @@ export function Dashboard() {
                 <StatutTile n={chargesMois.en_retard} label="En retard" cls="en_retard" />
                 <StatutTile n={chargesMois.payee_sans_justif} label="Payées sans justif." cls="payee_sans_justif" />
                 <StatutTile n={chargesMois.payee_avec_justif} label="Payées + justif." cls="payee_avec_justif" />
+              </div>
+            )}
+            {chargesMois.reglee_ailleurs > 0 && (
+              <div className="dim" style={{ fontSize: 12.5, marginTop: 10 }}>
+                + {chargesMois.reglee_ailleurs} réglée{chargesMois.reglee_ailleurs > 1 ? "s" : ""} hors comptes (PayPal…), sans effet sur tes soldes
               </div>
             )}
           </div>

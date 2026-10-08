@@ -34,6 +34,7 @@ export function Apercu({ onReglages }: { onReglages: () => void }) {
           budgets: inst.budgets,
           categories: inst.categories,
           profil: inst.profil,
+          echeances: inst.echeances,
         },
         mois
       ),

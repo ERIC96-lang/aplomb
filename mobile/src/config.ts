@@ -7,4 +7,4 @@
  */
 export const ONEDRIVE_CLIENT_ID = "212ed081-a65f-4539-acd5-d7f3eea9aad1";
 
-export const VERSION_MOBILE = "1.3.0";
+export const VERSION_MOBILE = "1.3.1";

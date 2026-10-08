@@ -9,6 +9,7 @@ import {
   majChargeFixe,
   majEcheance,
   supprimerChargeFixe,
+  supprimerTransaction,
   type ChargeFixeInput,
 } from "../db/repo";
 import { statutPaye } from "../lib/echeances";
@@ -24,6 +25,7 @@ const STATUT_LABEL: Record<string, string> = {
   en_retard: "En retard",
   payee_sans_justif: "Payée · sans justif.",
   payee_avec_justif: "Payée · avec justif.",
+  reglee_ailleurs: "Réglée hors comptes",
 };
 
 export function ChargesFixes() {
@@ -53,6 +55,37 @@ export function ChargesFixes() {
         .sort((a, b) => a.charge.jour_echeance - b.charge.jour_echeance),
     [echeances, mois, chargeById]
   );
+
+  /** Dépense créée automatiquement à l'échéance et pas encore confirmée (simple prévision). */
+  function depenseAuto(charge: ChargeFixe, e: Echeance): Transaction | undefined {
+    if (e.transaction_id == null) return undefined;
+    const t = transactions.find((x) => x.id === e.transaction_id);
+    return t && t.a_confirmer === 1 && t.auto_origine === `charge:${charge.id}` ? t : undefined;
+  }
+
+  /**
+   * Réglée hors des comptes suivis (ex. PayPal) : l'échéance est marquée réglée
+   * sans aucune dépense, donc sans effet sur les soldes. Une dépense automatique
+   * « à confirmer » déjà créée pour cette échéance est retirée.
+   */
+  async function reglerAilleurs(charge: ChargeFixe, e: Echeance) {
+    const auto = depenseAuto(charge, e);
+    if (e.transaction_id != null && !auto) return; // vraie dépense saisie : on n'y touche pas
+    if (auto) await supprimerTransaction(auto.id);
+    await majEcheance(e.id, { statut: "reglee_ailleurs", transaction_id: null });
+    await rafraichir();
+    toast(
+      auto
+        ? `« ${charge.nom} » réglée hors comptes — la dépense automatique a été retirée`
+        : `« ${charge.nom} » marquée réglée hors comptes`
+    );
+  }
+
+  async function annulerReglementAilleurs(charge: ChargeFixe, e: Echeance) {
+    await majEcheance(e.id, { statut: "a_venir" }); // le statut exact (à venir / en retard) est recalculé
+    await rafraichir();
+    toast(`« ${charge.nom} » de nouveau à régler`);
+  }
 
   async function attacherJustificatif(charge: ChargeFixe, e: Echeance) {
     const path = await choisirEtCopierJustificatif(charge.nom, e.mois);
@@ -112,7 +145,11 @@ export function ChargesFixes() {
                     </td>
                     <td className="right">
                       <div className="flex" style={{ justifyContent: "flex-end", gap: 6 }}>
-                        {e.transaction_id == null ? (
+                        {e.statut === "reglee_ailleurs" ? (
+                          <button className="btn sm" onClick={() => annulerReglementAilleurs(charge, e)}>
+                            Annuler
+                          </button>
+                        ) : e.transaction_id == null ? (
                           <button
                             className="btn sm primary"
                             onClick={() => setRegler({ charge, echeance: e })}
@@ -125,6 +162,16 @@ export function ChargesFixes() {
                             onClick={() => setRegler({ charge, echeance: e })}
                           >
                             Modifier
+                          </button>
+                        )}
+                        {e.statut !== "reglee_ailleurs" && (e.transaction_id == null || depenseAuto(charge, e)) && (
+                          <button
+                            className="btn sm"
+                            onClick={() => reglerAilleurs(charge, e)}
+                            style={{ whiteSpace: "nowrap" }}
+                            title="Payée hors de tes comptes suivis (ex. PayPal) : marquée réglée, sans dépense ni effet sur tes soldes"
+                          >
+                            Réglée ailleurs
                           </button>
                         )}
                         {e.justificatif_path ? (

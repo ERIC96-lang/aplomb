@@ -55,7 +55,9 @@ export type EcheanceStatut =
   | "a_venir"
   | "en_retard"
   | "payee_sans_justif"
-  | "payee_avec_justif";
+  | "payee_avec_justif"
+  /** Payée hors des comptes suivis (ex. PayPal) : réglée, mais sans dépense dans l'app. */
+  | "reglee_ailleurs";
 
 export interface Echeance {
   id: number;

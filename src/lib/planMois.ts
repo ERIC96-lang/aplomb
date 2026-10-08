@@ -1,9 +1,10 @@
 import { addDays, format, startOfMonth } from "date-fns";
-import type { Budget, Categorie, ChargeFixe, Transaction } from "../db/types";
+import type { Budget, Categorie, ChargeFixe, Echeance, Transaction } from "../db/types";
 import type { Profil } from "./profil";
 import { estimerRevenus } from "./previsions";
 import { prochainesOccurrences } from "./echeancier";
 import { statutsBudgets } from "./budgets";
+import { estReglee } from "./statutEcheance";
 
 /** Synthèse actionnable du mois en cours (l'« assistant Plan du mois »). */
 export interface PlanMois {
@@ -27,11 +28,16 @@ export function planDuMois(
     budgets: Budget[];
     categories: Categorie[];
     profil: Profil;
+    /** Statut des échéances (optionnel) : exclut les charges déjà réglées des « restantes ». */
+    echeances?: Echeance[];
   },
   mois: string,
   today = new Date()
 ): PlanMois {
   const { transactions, chargesFixes, budgets, categories, profil } = data;
+  const statutDuMois = new Map(
+    (data.echeances ?? []).filter((e) => e.mois === mois).map((e) => [e.charge_fixe_id, e.statut])
+  );
 
   const revenuAttendu = estimerRevenus(transactions, profil).attendu;
 
@@ -39,13 +45,18 @@ export function planDuMois(
   const dansSeptJours = format(addDays(today, 7), "yyyy-MM-dd");
 
   // Occurrences des charges fixes du mois courant (depuis le 1er du mois).
+  // Une charge réglée hors comptes (PayPal…) ne pèse pas sur les comptes suivis.
   const occ = prochainesOccurrences(chargesFixes, 1, startOfMonth(today)).filter(
-    (o) => o.mois === mois
+    (o) => o.mois === mois && statutDuMois.get(o.charge.id) !== "reglee_ailleurs"
   );
+  const dejaReglee = (o: (typeof occ)[number]) => {
+    const s = statutDuMois.get(o.charge.id);
+    return s !== undefined && estReglee(s);
+  };
   const chargesMoisTotal = occ.reduce((a, o) => a + o.charge.montant_attendu, 0);
-  const restantes = occ.filter((o) => o.date >= todayIso);
+  const restantes = occ.filter((o) => o.date >= todayIso && !dejaReglee(o));
   const chargesRestantesTotal = restantes.reduce((a, o) => a + o.charge.montant_attendu, 0);
-  const echeancesSemaine = occ.filter((o) => o.date >= todayIso && o.date <= dansSeptJours).length;
+  const echeancesSemaine = restantes.filter((o) => o.date <= dansSeptJours).length;
 
   const aConfirmer = transactions.filter((t) => t.a_confirmer === 1).length;
 

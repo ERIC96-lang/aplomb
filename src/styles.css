@@ -1439,3 +1439,7 @@ textarea:focus-visible,
   word-break: break-all;
   user-select: all;
 }
+.badge.reglee_ailleurs {
+  background: color-mix(in srgb, var(--teal) 14%, transparent);
+  color: var(--teal);
+}

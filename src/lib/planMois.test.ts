@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { planDuMois } from "./planMois";
-import type { Budget, Categorie, ChargeFixe, Transaction } from "../db/types";
+import type { Budget, Categorie, ChargeFixe, Echeance, Transaction } from "../db/types";
+import { projeterFinDeMois } from "./projection";
 import type { Profil } from "./profil";
 
 const profil = (p: Partial<Profil> = {}): Profil => ({
@@ -52,5 +53,43 @@ describe("planDuMois", () => {
     expect(plan.aConfirmer).toBe(1);
     expect(plan.budgetsAlerte).toBe(1);
     expect(plan.budgetsTotal).toBe(100);
+  });
+});
+
+describe("charges réglées hors comptes (PayPal…)", () => {
+  const today = new Date("2026-06-15T12:00:00");
+  const loyer = charge({ id: 1, montant_attendu: 800, jour_echeance: 25 });
+  const internet = charge({ id: 2, montant_attendu: 40, jour_echeance: 20 });
+  const ech = (charge_fixe_id: number, statut: Echeance["statut"]): Echeance => ({
+    id: charge_fixe_id, charge_fixe_id, mois: "2026-06", statut, transaction_id: null, justificatif_path: null,
+  });
+
+  it("plan du mois : la charge réglée ailleurs ne pèse plus sur les comptes", () => {
+    const plan = planDuMois(
+      { transactions: [], chargesFixes: [loyer, internet], budgets: [], categories: [], profil: profil(),
+        echeances: [ech(1, "a_venir"), ech(2, "reglee_ailleurs")] },
+      "2026-06", today
+    );
+    expect(plan.chargesMoisTotal).toBe(800);
+    expect(plan.chargesRestantesTotal).toBe(800);
+    expect(plan.echeancesSemaine).toBe(0); // internet (le 20) n'est plus à surveiller
+    expect(plan.resteAvantVariable).toBe(1200);
+  });
+
+  it("plan du mois : une charge déjà payée n'est plus « restante » mais reste dans le total", () => {
+    const plan = planDuMois(
+      { transactions: [], chargesFixes: [loyer, internet], budgets: [], categories: [], profil: profil(),
+        echeances: [ech(1, "payee_sans_justif"), ech(2, "a_venir")] },
+      "2026-06", today
+    );
+    expect(plan.chargesMoisTotal).toBe(840);
+    expect(plan.chargesRestantesTotal).toBe(40);
+  });
+
+  it("projection de fin de mois : la charge réglée ailleurs n'est plus déduite", () => {
+    const compte = { id: 1, nom: "Courant", type: "courant" as const, solde_initial: 1000, date_creation: "2026-01-01", archive: 0 };
+    const [p] = projeterFinDeMois([compte], [], [loyer, internet], [ech(1, "a_venir"), ech(2, "reglee_ailleurs")], "2026-06");
+    expect(p.chargesRestantes).toBe(800);
+    expect(p.soldeProjete).toBe(200);
   });
 });

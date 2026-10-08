@@ -1,6 +1,7 @@
 import { addMonths, format, parseISO } from "date-fns";
 import type { ChargeFixe, Echeance, Transaction } from "../db/types";
 import { soldeCompteAvecInitial } from "./calculs";
+import { estReglee } from "./statutEcheance";
 import type { Compte } from "../db/types";
 
 export interface ProjectionCompte {
@@ -58,11 +59,7 @@ export function projeterFinDeMois(
     for (const cf of chargesFixes) {
       if (cf.actif !== 1 || cf.compte_id !== compte.id) continue;
       const ech = echeancesMois.get(cf.id);
-      const payee =
-        ech &&
-        (ech.statut === "payee_sans_justif" ||
-          ech.statut === "payee_avec_justif");
-      if (!payee) chargesRestantes += cf.montant_attendu;
+      if (!ech || !estReglee(ech.statut)) chargesRestantes += cf.montant_attendu;
     }
 
     // Dépenses variables : moyenne par catégorie sur 3 mois.

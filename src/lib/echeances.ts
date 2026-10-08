@@ -2,6 +2,7 @@ import { lastDayOfMonth, parseISO, isAfter } from "date-fns";
 import type { ChargeFixe, Echeance, EcheanceStatut } from "../db/types";
 import { creerEcheance, listChargesFixes, listEcheances, majEcheance } from "../db/repo";
 import { moisCourant } from "./format";
+import { estReglee } from "./statutEcheance";
 
 /** Date d'échéance réelle d'une charge pour un mois (borne au dernier jour). */
 export function dateEcheance(mois: string, jour: number): Date {
@@ -50,9 +51,7 @@ export async function synchroniserEcheances(
   // 2. Rafraîchit le statut des échéances non payées (tous mois confondus).
   echeances = await listEcheances();
   for (const e of echeances) {
-    const paye =
-      e.statut === "payee_sans_justif" || e.statut === "payee_avec_justif";
-    if (paye || e.transaction_id != null) continue;
+    if (estReglee(e.statut) || e.transaction_id != null) continue;
     const c = chargesById.get(e.charge_fixe_id);
     if (!c) continue;
     const nouveau = statutNonPaye(e.mois, c.jour_echeance, today);

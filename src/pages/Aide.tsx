@@ -126,6 +126,14 @@ const SECTIONS: Section[] = [
         ],
       },
       {
+        titre: "Charge payée hors de vos comptes (PayPal…)",
+        points: [
+          "Si vous réglez une charge depuis un moyen non suivi par l'app (PayPal, carte d'un tiers…), touchez « Réglée ailleurs » sur son échéance dans Charges fixes.",
+          "L'échéance est marquée réglée, sans aucune dépense : vos soldes, budgets et projections ne bougent pas. Une dépense automatique « à confirmer » déjà créée pour elle est retirée.",
+          "Vous pouvez y joindre le reçu PayPal comme justificatif, et « Annuler » si vous vous êtes trompé.",
+        ],
+      },
+      {
         titre: "Rappels d'échéances",
         points: [
           "Les échéances proches ou en retard sont signalées par une pastille sur « Charges fixes » dans le menu.",

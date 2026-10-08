@@ -54,6 +54,7 @@ export async function genererAuto(today = new Date()): Promise<number> {
 
   for (const e of echeances) {
     if (e.mois !== mois || e.transaction_id != null) continue;
+    if (e.statut === "reglee_ailleurs") continue; // payée hors comptes (PayPal…) : aucune dépense
     const c = chargeById.get(e.charge_fixe_id);
     if (!c || c.periodicite !== "mensuelle") continue;
     const d = dateEcheance(e.mois, c.jour_echeance);
