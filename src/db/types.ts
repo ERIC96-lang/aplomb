@@ -25,6 +25,8 @@ export interface Transaction {
   auto_origine: string | null; // ex. "salaire", "charge:12"
   pointee: number; // 1 = rapprochée avec le relevé bancaire
   justificatif_path: string | null; // PDF joint (chemin relatif)
+  /** Objectif alimenté par ce virement (si plusieurs objectifs suivent le même compte). */
+  objectif_id?: number | null;
 }
 
 export type CategorieType = "revenu" | "depense";
@@ -99,8 +101,13 @@ export interface Objectif {
   date_cible: string | null; // 'YYYY-MM-DD'
   couleur: string;
   cree_le: string;
-  compte_id: number | null; // si défini : progression suivie automatiquement sur le solde du compte
+  compte_id: number | null; // compte suivi (modes « solde » et « versements »)
+  /** Absent dans les données antérieures à la v10 : déduit de compte_id. */
+  mode_suivi?: ModeSuivi;
 }
+
+/** manuel : saisie à la main ; solde : solde du compte ; versements : mouvements du compte depuis la création. */
+export type ModeSuivi = "manuel" | "solde" | "versements";
 
 export type FactureType = "recu" | "facture";
 

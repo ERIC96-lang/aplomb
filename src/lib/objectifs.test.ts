@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { montantActuelObjectif, objectifLieCompte, projectionAtteinte } from "./objectifs";
+import { montantActuelObjectif, objectifLieCompte, projectionAtteinte, rythmeMensuelObjectif } from "./objectifs";
 import type { Compte, Objectif, Transaction } from "../db/types";
 
 const compte = (id: number, solde_initial = 0): Compte => ({
@@ -73,5 +73,44 @@ describe("projectionAtteinte (ne doit jamais planter — cause de l'écran blanc
   it("cas normal → renvoie une date lisible", () => {
     const s = projectionAtteinte(1200, 400, false, base); // 3 mois
     expect(s).toMatch(/~3 mois/);
+  });
+});
+
+describe("objectifs alimentés par les versements", () => {
+  const comptes = [compte(1, 0), compte(3, 2000)]; // 3 = compte épargne déjà garni
+  const vers = (montant: number, date: string, p: Partial<Transaction> = {}) =>
+    tx({ type: "virement", montant, date, compte_id: 1, compte_dest_id: 3, ...p });
+  const o = (p: Partial<Objectif> = {}) =>
+    obj({ id: 1, compte_id: 3, mode_suivi: "versements", montant_actuel: 0, cree_le: "2026-09-12T10:00:00Z", ...p });
+
+  it("compte les virements vers le compte depuis la création, pas l'argent déjà présent", () => {
+    const txs = [vers(500, "2026-08-01"), vers(150, "2026-10-08")];
+    expect(montantActuelObjectif(o(), comptes, txs)).toBe(150);
+  });
+
+  it("ajoute le montant de départ et déduit les retraits", () => {
+    const txs = [vers(150, "2026-10-08"), tx({ type: "virement", montant: 40, date: "2026-10-09", compte_id: 3, compte_dest_id: 1 })];
+    expect(montantActuelObjectif(o({ montant_actuel: 100 }), comptes, txs)).toBe(210);
+  });
+
+  it("compte partagé : chaque objectif ne reçoit que ses virements ; les non affectés vont au plus ancien", () => {
+    const a = o({ id: 1, cree_le: "2026-09-01T00:00:00Z" });
+    const b = o({ id: 2, cree_le: "2026-09-20T00:00:00Z" });
+    const tous = [a, b];
+    const txs = [vers(100, "2026-10-01"), vers(60, "2026-10-02", { objectif_id: 2 }), vers(30, "2026-10-03", { objectif_id: 1 })];
+    expect(montantActuelObjectif(a, comptes, txs, tous)).toBe(130); // 100 non affecté + 30 affecté
+    expect(montantActuelObjectif(b, comptes, txs, tous)).toBe(60);
+  });
+
+  it("garde l'ancien comportement (solde) pour un objectif lié sans mode explicite", () => {
+    expect(montantActuelObjectif(obj({ compte_id: 3, montant_actuel: 0 }), comptes, [vers(150, "2026-10-08")])).toBe(2150);
+  });
+
+  it("rythme mensuel réel des versements", () => {
+    const txs = [vers(150, "2026-10-08")];
+    const r = rythmeMensuelObjectif(o(), txs, [], new Date("2026-10-12T00:00:00Z"));
+    expect(r).toBeGreaterThan(140); // ~150 sur ~30 jours
+    expect(r).toBeLessThan(160);
+    expect(rythmeMensuelObjectif(obj(), txs)).toBeNull(); // manuel
   });
 });

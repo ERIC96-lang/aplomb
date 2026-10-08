@@ -44,3 +44,30 @@ describe("statutsBudgets", () => {
     expect(s[0].categorie_id).toBe(2);
   });
 });
+
+describe("budget d'épargne = objectif mensuel", () => {
+  const catEpargne: Categorie = { id: 7, nom: "Épargne", type: "depense", couleur: "#0aa" };
+  const comptes = [
+    { id: 1, nom: "Courant", type: "courant" as const, solde_initial: 0, date_creation: "2026-01-01", archive: 0 },
+    { id: 3, nom: "Livret", type: "epargne" as const, solde_initial: 0, date_creation: "2026-01-01", archive: 0 },
+  ];
+  const vir = (montant: number, src: number, dest: number, date = "2026-10-08"): Transaction => ({
+    ...tx(montant, 0, date, "virement"), categorie_id: null, compte_id: src, compte_dest_id: dest,
+  });
+  const budgetsE: Budget[] = [{ id: 9, categorie_id: 7, montant_plafond: 150 }, { id: 1, categorie_id: 1, montant_plafond: 100 }];
+
+  it("compte les virements nets vers les comptes épargne du mois, jamais « dépassé »", () => {
+    const t = [vir(150, 1, 3), vir(100, 1, 3), vir(30, 3, 1), vir(500, 1, 3, "2026-09-01")];
+    const s = statutsBudgets(budgetsE, [...cats, catEpargne], t, "2026-10", comptes).find((x) => x.epargne)!;
+    expect(s.depense).toBe(220); // 150 + 100 − 30 (septembre exclu)
+    expect(s.etat).toBe("ok"); // 147 % de l'objectif, mais pas une alerte
+    expect(s.reste).toBe(-70);
+  });
+
+  it("n'altère pas les autres budgets et place l'épargne en dernier", () => {
+    const l = statutsBudgets(budgetsE, [...cats, catEpargne], [tx(120, 1, "2026-10-02")], "2026-10", comptes);
+    expect(l.map((x) => x.nom)).toEqual(["Alimentation", "Épargne"]);
+    expect(l[0].etat).toBe("depasse");
+    expect(l[0].epargne).toBe(false);
+  });
+});

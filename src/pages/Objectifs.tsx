@@ -12,9 +12,17 @@ import {
   type ObjectifInput,
 } from "../db/repo";
 import { pointsFluxMensuel } from "../lib/series";
-import { montantActuelObjectif, objectifLieCompte, projectionAtteinte } from "../lib/objectifs";
-import { formatMontant, formatDate } from "../lib/format";
-import type { Compte, Objectif } from "../db/types";
+import {
+  comptePartage,
+  debutObjectif,
+  modeSuivi,
+  montantActuelObjectif,
+  objectifLieCompte,
+  projectionAtteinte,
+  rythmeMensuelObjectif,
+} from "../lib/objectifs";
+import { formatMontant, formatDate, getDevise } from "../lib/format";
+import type { Compte, ModeSuivi, Objectif } from "../db/types";
 
 const COULEURS = ["#6d6bf5", "#2dd4bf", "#34d399", "#f59e0b", "#ec4899", "#60a5fa", "#a78bfa"];
 
@@ -23,7 +31,7 @@ export function Objectifs() {
   const toast = useToast();
   const [edit, setEdit] = useState<Objectif | "new" | null>(null);
 
-  // Épargne mensuelle moyenne (3 derniers mois) pour la projection.
+  // Épargne mensuelle moyenne (3 derniers mois) : projection des objectifs manuels.
   const epargneMoyenne = useMemo(() => {
     const flux = pointsFluxMensuel(transactions, undefined, 3);
     const m = flux.reduce((a, f) => a + f.epargne, 0) / (flux.length || 1);
@@ -60,9 +68,11 @@ export function Objectifs() {
               key={o.id}
               o={o}
               comptes={comptes}
-              montantActuel={montantActuelObjectif(o, comptes, transactions)}
+              montantActuel={montantActuelObjectif(o, comptes, transactions, objectifs)}
               lieCompte={objectifLieCompte(o, comptes)}
-              epargneMoyenne={epargneMoyenne}
+              partage={comptePartage(o, objectifs)}
+              rythme={rythmeMensuelObjectif(o, transactions, objectifs) ?? epargneMoyenne}
+              rythmeReel={modeSuivi(o) !== "manuel"}
               onEdit={() => setEdit(o)}
               onChange={rafraichir}
               toast={toast}
@@ -98,7 +108,9 @@ function ObjectifCard({
   comptes,
   montantActuel,
   lieCompte,
-  epargneMoyenne,
+  partage,
+  rythme,
+  rythmeReel,
   onEdit,
   onChange,
   toast,
@@ -107,22 +119,22 @@ function ObjectifCard({
   comptes: Compte[];
   montantActuel: number;
   lieCompte: boolean;
-  epargneMoyenne: number;
+  partage: boolean;
+  rythme: number;
+  rythmeReel: boolean;
   onEdit: () => void;
   onChange: () => Promise<void>;
   toast: (m: string) => void;
 }) {
   const [ajout, setAjout] = useState("");
+  const mode = modeSuivi(o);
   const compteNom = lieCompte ? comptes.find((c) => c.id === o.compte_id)?.nom ?? null : null;
   const ratio = o.montant_cible > 0 ? Math.min(1, montantActuel / o.montant_cible) : 0;
   const atteint = montantActuel >= o.montant_cible;
   const reste = Math.max(0, o.montant_cible - montantActuel);
 
-  // Projection : date d'atteinte estimée au rythme d'épargne moyen (robuste).
-  const projection = useMemo(
-    () => projectionAtteinte(reste, epargneMoyenne, atteint),
-    [atteint, epargneMoyenne, reste]
-  );
+  // Projection : au rythme réel des versements (objectif suivi) ou de l'épargne moyenne.
+  const projection = useMemo(() => projectionAtteinte(reste, rythme, atteint), [atteint, rythme, reste]);
 
   // Si une date cible est fixée : effort mensuel requis.
   const effortRequis = useMemo(() => {
@@ -138,6 +150,8 @@ function ObjectifCard({
     await onChange();
     toast(delta >= 0 ? "Épargne ajoutée" : "Retrait enregistré");
   }
+
+  const descriptionSuivi = mode === "versements" ? `Versements · ${compteNom}` : `Solde · ${compteNom}`;
 
   return (
     <div className="card">
@@ -164,15 +178,34 @@ function ObjectifCard({
         <div
           className="chip"
           style={{ background: "var(--brand-grad-soft)", marginTop: 12, fontSize: 12 }}
-          title="La progression suit automatiquement le solde de ce compte"
+          title={
+            mode === "versements"
+              ? "Chaque virement vers ce compte fait avancer l'objectif ; un retrait le fait reculer."
+              : "La progression suit le solde total de ce compte."
+          }
         >
-          <Icon name="repeat" size={13} /> Suivi auto · {compteNom}
+          <Icon name="repeat" size={13} /> {descriptionSuivi}
+        </div>
+      )}
+      {mode === "versements" && compteNom && (
+        <div className="dim" style={{ fontSize: 12, marginTop: 6 }}>
+          Virements comptés depuis le {formatDate(debutObjectif(o))}
+        </div>
+      )}
+      {mode === "versements" && partage && (
+        <div className="dim" style={{ fontSize: 12, marginTop: 6 }}>
+          Compte partagé avec d'autres objectifs : choisis l'objectif alimenté à chaque virement.
         </div>
       )}
 
       <div className="muted" style={{ fontSize: 12.5, marginTop: 12 }}>
         {projection}
       </div>
+      {rythmeReel && !atteint && rythme > 0 && (
+        <div className="dim" style={{ fontSize: 12, marginTop: 3 }}>
+          Au rythme de tes versements : {formatMontant(rythme)} / mois
+        </div>
+      )}
       {o.date_cible && (
         <div className="dim" style={{ fontSize: 12, marginTop: 3 }}>
           Cible : {formatDate(o.date_cible)}
@@ -180,7 +213,7 @@ function ObjectifCard({
         </div>
       )}
 
-      {!atteint && !lieCompte && (
+      {!atteint && mode === "manuel" && (
         <div className="flex" style={{ gap: 6, marginTop: 14, flexWrap: "wrap" }}>
           <button className="btn sm" onClick={() => contribuer(50)}>+ 50</button>
           <button className="btn sm" onClick={() => contribuer(100)}>+ 100</button>
@@ -220,6 +253,24 @@ function ObjectifCard({
   );
 }
 
+const MODES: { valeur: ModeSuivi; libelle: string; aide: string }[] = [
+  {
+    valeur: "versements",
+    libelle: "Mes versements vers un compte",
+    aide: "Chaque virement vers ce compte fait avancer l'objectif tout seul ; un retrait le fait reculer. Seuls les mouvements à partir de la création de l'objectif comptent.",
+  },
+  {
+    valeur: "solde",
+    libelle: "Le solde d'un compte",
+    aide: "La progression suit le solde total du compte, y compris l'argent déjà présent.",
+  },
+  {
+    valeur: "manuel",
+    libelle: "Suivi manuel",
+    aide: "Tu indiques toi-même tes versements avec les boutons de la carte.",
+  },
+];
+
 function ObjectifForm({
   objectif,
   comptes,
@@ -233,25 +284,32 @@ function ObjectifForm({
   onSaved: () => void;
   onDelete: (id: number) => void;
 }) {
+  const devise = getDevise();
+  const compteParDefaut = comptes.find((c) => c.type === "epargne")?.id ?? comptes[0]?.id ?? "";
   const [nom, setNom] = useState(objectif?.nom ?? "");
   const [cible, setCible] = useState(objectif ? String(objectif.montant_cible) : "");
   const [actuel, setActuel] = useState(objectif ? String(objectif.montant_actuel) : "0");
   const [dateCible, setDateCible] = useState(objectif?.date_cible ?? "");
   const [couleur, setCouleur] = useState(objectif?.couleur ?? COULEURS[0]);
-  const [compteId, setCompteId] = useState<number | "">(objectif?.compte_id ?? "");
+  const [mode, setMode] = useState<ModeSuivi>(
+    objectif ? modeSuivi(objectif) : comptes.length > 0 ? "versements" : "manuel"
+  );
+  const [compteId, setCompteId] = useState<number | "">(objectif?.compte_id ?? compteParDefaut);
 
-  const valide = nom.trim() && parseFloat(cible.replace(",", ".")) > 0;
+  const surCompte = mode !== "manuel";
+  const valide = nom.trim() && parseFloat(cible.replace(",", ".")) > 0 && (!surCompte || compteId !== "");
 
   async function submit() {
     if (!valide) return;
     const input: ObjectifInput = {
       nom: nom.trim(),
       montant_cible: parseFloat(cible.replace(",", ".")),
-      // Lié à un compte : le montant actuel est calculé sur le solde, on stocke 0.
-      montant_actuel: compteId === "" ? parseFloat(actuel.replace(",", ".")) || 0 : 0,
+      // « solde » : calculé sur le compte, on stocke 0. Sinon : saisi / point de départ.
+      montant_actuel: mode === "solde" ? 0 : parseFloat(actuel.replace(",", ".")) || 0,
       date_cible: dateCible || null,
       couleur,
-      compte_id: compteId === "" ? null : Number(compteId),
+      compte_id: surCompte ? Number(compteId) : null,
+      mode_suivi: mode,
     };
     if (objectif) await majObjectif(objectif.id, input);
     else await creerObjectif(input);
@@ -280,38 +338,64 @@ function ObjectifForm({
       </div>
       <div className="row">
         <div className="field">
-          <label>Montant cible (€)</label>
+          <label>Montant cible ({devise})</label>
           <input className="input" inputMode="decimal" value={cible} onChange={(e) => setCible(e.target.value)} placeholder="3000" />
         </div>
-        {compteId === "" && (
+        {mode !== "solde" && (
           <div className="field">
-            <label>Déjà épargné (€)</label>
+            <label>{mode === "versements" ? `Déjà mis de côté avant (${devise})` : `Déjà épargné (${devise})`}</label>
             <input className="input" inputMode="decimal" value={actuel} onChange={(e) => setActuel(e.target.value)} />
+            {mode === "versements" && (
+              <div className="muted" style={{ fontSize: 11.5, marginTop: 5 }}>
+                Argent mis de côté AVANT la création de l'objectif. Les virements saisis depuis sont comptés automatiquement.
+              </div>
+            )}
           </div>
         )}
       </div>
-      {comptes.length > 0 && (
+
+      <div className="field">
+        <label>Progression</label>
+        <select
+          className="select"
+          value={mode}
+          onChange={(e) => {
+            const suivant = e.target.value as ModeSuivi;
+            // Passage aux versements : les virements déjà saisis seront comptés
+            // automatiquement ; garder l'ancien total manuel les compterait deux fois.
+            if (suivant === "versements" && mode !== "versements") setActuel("0");
+            setMode(suivant);
+          }}
+          disabled={comptes.length === 0}
+        >
+          {MODES.filter((m) => comptes.length > 0 || m.valeur === "manuel").map((m) => (
+            <option key={m.valeur} value={m.valeur}>
+              {m.libelle}
+            </option>
+          ))}
+        </select>
+        <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>
+          {MODES.find((m) => m.valeur === mode)?.aide}
+        </div>
+      </div>
+
+      {surCompte && (
         <div className="field">
-          <label>Suivi automatique (optionnel)</label>
+          <label>Compte suivi</label>
           <select
             className="select"
             value={compteId}
             onChange={(e) => setCompteId(e.target.value === "" ? "" : Number(e.target.value))}
           >
-            <option value="">Suivi manuel (je saisis mes versements)</option>
             {comptes.map((c) => (
               <option key={c.id} value={c.id}>
-                Suivre le solde de « {c.nom} »
+                {c.nom}
               </option>
             ))}
           </select>
-          {compteId !== "" && (
-            <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>
-              La progression suivra automatiquement le solde de ce compte — aucun versement à saisir à la main.
-            </div>
-          )}
         </div>
       )}
+
       <div className="field">
         <label>Date cible (optionnel)</label>
         <input className="input" type="date" value={dateCible} onChange={(e) => setDateCible(e.target.value)} />

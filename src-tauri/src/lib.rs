@@ -165,6 +165,15 @@ UPDATE transactions SET categorie_id = NULL WHERE categorie_id IS NOT NULL AND c
 UPDATE budgets SET categorie_id = NULL WHERE categorie_id IS NOT NULL AND categorie_id NOT IN (SELECT id FROM categories);
 "#;
 
+// Objectifs alimentés par les versements : mode de suivi explicite (les
+// objectifs déjà liés à un compte gardent le suivi du solde) et affectation
+// d'un virement à un objectif précis quand plusieurs partagent un compte.
+const SCHEMA_V10: &str = r#"
+ALTER TABLE objectifs ADD COLUMN mode_suivi TEXT NOT NULL DEFAULT 'manuel';
+UPDATE objectifs SET mode_suivi = 'solde' WHERE compte_id IS NOT NULL;
+ALTER TABLE transactions ADD COLUMN objectif_id INTEGER REFERENCES objectifs(id) ON DELETE SET NULL;
+"#;
+
 // --- Windows Hello (déverrouillage biométrique) ---------------------------
 #[cfg(windows)]
 mod hello {
@@ -547,6 +556,12 @@ pub fn run() {
             version: 9,
             description: "reparation des references orphelines (fk)",
             sql: SCHEMA_V9,
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 10,
+            description: "objectifs alimentes par les versements",
+            sql: SCHEMA_V10,
             kind: MigrationKind::Up,
         },
     ];

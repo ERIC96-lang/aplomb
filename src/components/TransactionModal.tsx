@@ -10,7 +10,8 @@ import {
   supprimerTransaction,
   type TransactionInput,
 } from "../db/repo";
-import { aujourdhui } from "../lib/format";
+import { aujourdhui, getDevise } from "../lib/format";
+import { objectifPrincipalDuCompte, objectifsVersementsDuCompte } from "../lib/objectifs";
 import { categoriePourDescription, motCleDepuisDescription } from "../lib/categorisation";
 import { genererRecuTransaction } from "../lib/pdf";
 import { choisirEtCopierJustificatif, ouvrirJustificatif } from "../lib/justificatifs";
@@ -38,7 +39,7 @@ export function TransactionModal({
   onClose,
   onSaved,
 }: Props) {
-  const { comptes, categories } = useAppData();
+  const { comptes, categories, objectifs } = useAppData();
 
   const [type, setType] = useState<TxType>(
     lockType ?? transaction?.type ?? presets?.type ?? "depense"
@@ -58,6 +59,9 @@ export function TransactionModal({
   );
   const [categorieId, setCategorieId] = useState<number | "">(
     transaction?.categorie_id ?? presets?.categorie_id ?? ""
+  );
+  const [objectifId, setObjectifId] = useState<number | "">(
+    transaction?.objectif_id ?? presets?.objectif_id ?? ""
   );
   const [busy, setBusy] = useState(false);
   const [justif, setJustif] = useState<string | null>(transaction?.justificatif_path ?? null);
@@ -118,6 +122,20 @@ export function TransactionModal({
     [categories, type]
   );
 
+  // Objectifs « versements » concernés par ce virement (compte de destination ou de source).
+  const objectifsVirement = useMemo(() => {
+    if (type !== "virement") return [];
+    const dest = compteDestId === "" ? null : Number(compteDestId);
+    const src = compteId === "" ? null : Number(compteId);
+    const l = [...objectifsVersementsDuCompte(objectifs, dest), ...objectifsVersementsDuCompte(objectifs, src)];
+    return l.filter((o, i) => l.findIndex((x) => x.id === o.id) === i);
+  }, [type, compteId, compteDestId, objectifs]);
+  // Objectif retenu : le choix explicite s'il est valide, sinon le plus ancien du compte.
+  const objectifRetenu =
+    objectifsVirement.find((o) => o.id === objectifId) ??
+    objectifPrincipalDuCompte(objectifs, compteDestId === "" ? null : Number(compteDestId)) ??
+    objectifPrincipalDuCompte(objectifs, compteId === "" ? null : Number(compteId));
+
   const erreur = (() => {
     const m = parseFloat(montant.replace(",", "."));
     if (!m || m <= 0) return "Montant invalide";
@@ -144,6 +162,7 @@ export function TransactionModal({
         type === "virement" && compteDestId !== "" ? Number(compteDestId) : null,
       categorie_id:
         type === "virement" ? null : categorieId === "" ? null : Number(categorieId),
+      objectif_id: objectifsVirement.length > 0 ? objectifRetenu?.id ?? null : null,
     };
     // F1 — mémorise une règle de catégorisation à partir de ce classement manuel.
     if (proposerRegle && memoriser && input.categorie_id != null) {
@@ -224,7 +243,7 @@ export function TransactionModal({
 
       <div className="row">
         <div className="field">
-          <label>Montant (€)</label>
+          <label>Montant ({getDevise()})</label>
           <input
             className="input"
             value={montant}
@@ -370,6 +389,28 @@ export function TransactionModal({
 
       {erreur && (
         <div style={{ color: "var(--red)", fontSize: 13, fontWeight: 600 }}>{erreur}</div>
+      )}
+
+      {objectifsVirement.length === 1 && (
+        <div className="chip" style={{ background: "var(--brand-grad-soft)", fontSize: 12.5, alignSelf: "flex-start" }}>
+          <Icon name="target" size={13} /> Alimente l'objectif « {objectifsVirement[0].nom} »
+        </div>
+      )}
+      {objectifsVirement.length > 1 && (
+        <div className="field">
+          <label>Objectif alimenté</label>
+          <select
+            className="select"
+            value={objectifRetenu?.id ?? ""}
+            onChange={(e) => setObjectifId(e.target.value === "" ? "" : Number(e.target.value))}
+          >
+            {objectifsVirement.map((o) => (
+              <option key={o.id} value={o.id}>
+                {o.nom}
+              </option>
+            ))}
+          </select>
+        </div>
       )}
 
       {type === "virement" && (

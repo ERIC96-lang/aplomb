@@ -8,6 +8,7 @@ import type {
   EcheanceStatut,
   Facture,
   FactureData,
+  ModeSuivi,
   Objectif,
   Periodicite,
   RegleCategorisation,
@@ -119,14 +120,15 @@ export interface TransactionInput {
   categorie_id: number | null;
   a_confirmer?: boolean;
   auto_origine?: string | null;
+  objectif_id?: number | null;
 }
 
 export async function creerTransaction(t: TransactionInput): Promise<number> {
   const db = await getDb();
   const res = await db.execute(
     `INSERT INTO transactions
-       (type, montant, date, description, compte_id, compte_dest_id, categorie_id, created_at, a_confirmer, auto_origine)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       (type, montant, date, description, compte_id, compte_dest_id, categorie_id, created_at, a_confirmer, auto_origine, objectif_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       t.type,
       t.montant,
@@ -138,6 +140,7 @@ export async function creerTransaction(t: TransactionInput): Promise<number> {
       new Date().toISOString(),
       t.a_confirmer ? 1 : 0,
       t.auto_origine ?? null,
+      t.objectif_id ?? null,
     ]
   );
   return res.lastInsertId as number;
@@ -181,7 +184,7 @@ export async function majTransaction(
   await db.execute(
     `UPDATE transactions
        SET type = ?, montant = ?, date = ?, description = ?,
-           compte_id = ?, compte_dest_id = ?, categorie_id = ?
+           compte_id = ?, compte_dest_id = ?, categorie_id = ?, objectif_id = ?
      WHERE id = ?`,
     [
       t.type,
@@ -191,6 +194,7 @@ export async function majTransaction(
       t.compte_id,
       t.compte_dest_id,
       t.categorie_id,
+      t.objectif_id ?? null,
       id,
     ]
   );
@@ -368,14 +372,15 @@ export interface ObjectifInput {
   date_cible: string | null;
   couleur: string;
   compte_id: number | null;
+  mode_suivi: ModeSuivi;
 }
 
 export async function creerObjectif(o: ObjectifInput): Promise<number> {
   const db = await getDb();
   const res = await db.execute(
-    `INSERT INTO objectifs (nom, montant_cible, montant_actuel, date_cible, couleur, compte_id, cree_le)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [o.nom, o.montant_cible, o.montant_actuel, o.date_cible, o.couleur, o.compte_id, new Date().toISOString()]
+    `INSERT INTO objectifs (nom, montant_cible, montant_actuel, date_cible, couleur, compte_id, mode_suivi, cree_le)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [o.nom, o.montant_cible, o.montant_actuel, o.date_cible, o.couleur, o.compte_id, o.mode_suivi, new Date().toISOString()]
   );
   return res.lastInsertId as number;
 }
@@ -384,9 +389,9 @@ export async function majObjectif(id: number, o: ObjectifInput): Promise<void> {
   const db = await getDb();
   await db.execute(
     `UPDATE objectifs
-       SET nom = ?, montant_cible = ?, montant_actuel = ?, date_cible = ?, couleur = ?, compte_id = ?
+       SET nom = ?, montant_cible = ?, montant_actuel = ?, date_cible = ?, couleur = ?, compte_id = ?, mode_suivi = ?
      WHERE id = ?`,
-    [o.nom, o.montant_cible, o.montant_actuel, o.date_cible, o.couleur, o.compte_id, id]
+    [o.nom, o.montant_cible, o.montant_actuel, o.date_cible, o.couleur, o.compte_id, o.mode_suivi, id]
   );
 }
 

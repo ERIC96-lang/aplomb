@@ -51,7 +51,8 @@ export function planDuMois(
 
   const statuts = statutsBudgets(budgets, categories, transactions, mois);
   const budgetsAlerte = statuts.filter((b) => b.etat !== "ok").length;
-  const budgetsTotal = budgets.reduce((a, b) => a + b.montant_plafond, 0);
+  // L'objectif d'épargne n'est pas un plafond de dépenses.
+  const budgetsTotal = statuts.filter((s) => !s.epargne).reduce((a, s) => a + s.plafond, 0);
 
   return {
     mois,

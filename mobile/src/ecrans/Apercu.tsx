@@ -38,7 +38,7 @@ export function Apercu({ onReglages }: { onReglages: () => void }) {
       ),
       soldes: comptes.map((c) => ({ c, solde: soldeCompteAvecInitial(c, transactions) })),
       objectifs: inst.objectifs.slice(0, 3).map((o) => {
-        const actuel = montantActuelObjectif(o, inst.comptes, transactions);
+        const actuel = montantActuelObjectif(o, inst.comptes, transactions, inst.objectifs);
         return { o, actuel, ratio: o.montant_cible > 0 ? Math.min(1, actuel / o.montant_cible) : 0 };
       }),
     };

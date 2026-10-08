@@ -10,10 +10,11 @@ export function Budgets({ onReglages }: { onReglages: () => void }) {
 
   const statuts = useMemo(() => {
     if (!inst) return [];
-    return statutsBudgets(inst.budgets, inst.categories, transactions, mois).sort((a, b) => b.ratio - a.ratio);
+    return statutsBudgets(inst.budgets, inst.categories, transactions, mois, inst.comptes).sort((a, b) => b.ratio - a.ratio);
   }, [inst, transactions, mois]);
 
-  const total = statuts.reduce(
+  // L'objectif d'épargne n'est pas un plafond de dépenses : hors totaux.
+  const total = statuts.filter((s) => !s.epargne).reduce(
     (acc, s) => ({ depense: acc.depense + s.depense, plafond: acc.plafond + s.plafond }),
     { depense: 0, plafond: 0 }
   );
@@ -31,6 +32,7 @@ export function Budgets({ onReglages }: { onReglages: () => void }) {
           </div>
         ) : (
           <>
+            {total.plafond > 0 && (
             <div className="m-carte m-hero">
               <div className="m-hero-lib">Dépensé sur vos budgets</div>
               <div className="m-hero-montant">{montantGrand(formatMontant(total.depense))}</div>
@@ -39,6 +41,7 @@ export function Budgets({ onReglages }: { onReglages: () => void }) {
                 <span style={{ width: `${Math.min(100, Math.max(2, ratioTotal * 100))}%` }} />
               </div>
             </div>
+            )}
 
             <div className="m-carte">
               {statuts.map((s) => (
@@ -55,16 +58,22 @@ export function Budgets({ onReglages }: { onReglages: () => void }) {
                       {formatMontant(s.depense)}
                     </span>
                   </div>
-                  <div className={`m-barre ${s.etat === "ok" ? "" : s.etat}`}>
+                  <div className={`m-barre ${s.epargne ? (s.ratio >= 1 ? "ok" : "") : s.etat === "ok" ? "" : s.etat}`}>
                     <span style={{ width: `${Math.min(100, Math.max(2, s.ratio * 100))}%` }} />
                   </div>
                   <div
                     className="flex-between"
                     style={{ marginTop: 6, fontSize: 12.5, color: "var(--text-dim)" }}
                   >
-                    <span>Plafond {formatMontant(s.plafond)}</span>
-                    <span className={s.etat === "depasse" ? "neg" : s.etat === "attention" ? "attn" : ""}>
-                      {s.reste >= 0 ? `Reste ${formatMontant(s.reste)}` : `Dépassé de ${formatMontant(-s.reste)}`}
+                    <span>{s.epargne ? "Objectif" : "Plafond"} {formatMontant(s.plafond)}</span>
+                    <span className={s.epargne ? (s.reste <= 0 ? "pos" : "") : s.etat === "depasse" ? "neg" : s.etat === "attention" ? "attn" : ""}>
+                      {s.epargne
+                        ? s.reste > 0
+                          ? `Reste ${formatMontant(s.reste)} à épargner`
+                          : "Objectif atteint"
+                        : s.reste >= 0
+                          ? `Reste ${formatMontant(s.reste)}`
+                          : `Dépassé de ${formatMontant(-s.reste)}`}
                     </span>
                   </div>
                 </div>

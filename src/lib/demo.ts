@@ -73,8 +73,8 @@ export async function genererDonneesDemo(): Promise<void> {
   }
 
   // Objectifs d'épargne de démo.
-  await creerObjectif({ nom: "Vacances d'été", montant_cible: 2500, montant_actuel: 900, date_cible: null, couleur: "#2dd4bf", compte_id: null });
-  await creerObjectif({ nom: "Épargne de précaution", montant_cible: 6000, montant_actuel: 5000, date_cible: null, couleur: "#6d6bf5", compte_id: null });
+  await creerObjectif({ nom: "Vacances d'été", montant_cible: 2500, montant_actuel: 900, date_cible: null, couleur: "#2dd4bf", compte_id: null, mode_suivi: "manuel" });
+  await creerObjectif({ nom: "Épargne de précaution", montant_cible: 6000, montant_actuel: 5000, date_cible: null, couleur: "#6d6bf5", compte_id: null, mode_suivi: "manuel" });
 
   const now = new Date();
 

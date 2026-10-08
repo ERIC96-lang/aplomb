@@ -150,13 +150,15 @@ const SECTIONS: Section[] = [
         points: [
           "Fixez un plafond mensuel par catégorie. L'état passe d'« ok » à « attention » (≥ 80 %) puis « dépassé » (≥ 100 %).",
           "Un dépassement déclenche une alerte et une pastille sur « Budgets ».",
+          "Le budget de la catégorie « Épargne » est un objectif, pas un plafond : il compte vos virements vers vos comptes épargne du mois et passe au vert quand la cible est atteinte (jamais « dépassé »).",
         ],
       },
       {
         titre: "Objectifs d'épargne",
         points: [
-          "Définissez un montant à atteindre ; l'app estime la date d'atteinte selon votre épargne moyenne.",
-          "Un objectif peut suivre automatiquement le solde d'un compte : sa progression reflète alors le solde réel, sans saisie manuelle.",
+          "Définissez un montant à atteindre et choisissez comment il progresse : vos versements vers un compte, le solde d'un compte, ou un suivi manuel.",
+          "« Mes versements » : chaque virement vers le compte choisi fait avancer l'objectif tout seul (un retrait le fait reculer), à partir de la création de l'objectif. La date d'atteinte est estimée sur votre rythme réel de versements.",
+          "Plusieurs objectifs sur le même compte ? Le formulaire de virement vous demande lequel alimenter ; un virement sans choix va à l'objectif le plus ancien.",
         ],
       },
       {

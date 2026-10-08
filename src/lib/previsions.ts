@@ -110,7 +110,7 @@ export function calculerPrevisions(
 
   // Plans d'épargne pour les objectifs datés.
   const plans: PlanObjectif[] = objectifs.map((o) => {
-    const actuel = montantActuelObjectif(o, comptes, transactions);
+    const actuel = montantActuelObjectif(o, comptes, transactions, objectifs);
     const reste = Math.max(0, o.montant_cible - actuel);
     if (!o.date_cible) return { objectif: o, reste, requisMensuel: 0, moisRestants: null };
     const moisRestants = Math.max(1, differenceInCalendarMonths(new Date(o.date_cible), today));

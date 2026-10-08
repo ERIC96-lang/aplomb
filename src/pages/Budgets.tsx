@@ -21,7 +21,7 @@ const LABEL_ETAT: Record<BudgetEtat, string> = {
 };
 
 export function Budgets() {
-  const { budgets, categories, transactions, rafraichir } = useAppData();
+  const { budgets, categories, comptes, transactions, rafraichir } = useAppData();
   const toast = useToast();
   const [mois, setMois] = useState(moisCourant());
 
@@ -33,8 +33,8 @@ export function Budgets() {
   }, [transactions]);
 
   const statuts = useMemo(
-    () => statutsBudgets(budgets, categories, transactions, mois),
-    [budgets, categories, transactions, mois]
+    () => statutsBudgets(budgets, categories, transactions, mois, comptes),
+    [budgets, categories, transactions, mois, comptes]
   );
   const statutParCat = useMemo(
     () => new Map(statuts.map((s) => [s.categorie_id, s])),
@@ -76,8 +76,10 @@ export function Budgets() {
     toast(n > 0 ? `${n} plafond(s) proposé(s)` : "Aucune donnée pour proposer des plafonds");
   }
 
-  const totalPlafond = statuts.reduce((a, s) => a + s.plafond, 0);
-  const totalDepense = statuts.reduce((a, s) => a + s.depense, 0);
+  // L'objectif d'épargne n'est pas un plafond de dépenses : hors totaux.
+  const plafonds = statuts.filter((s) => !s.epargne);
+  const totalPlafond = plafonds.reduce((a, s) => a + s.plafond, 0);
+  const totalDepense = plafonds.reduce((a, s) => a + s.depense, 0);
   const ratioGlobal = totalPlafond > 0 ? totalDepense / totalPlafond : 0;
   const nbDepasses = statuts.filter((s) => s.etat === "depasse").length;
 
@@ -105,7 +107,7 @@ export function Budgets() {
       </div>
 
       {/* Résumé global */}
-      {statuts.length > 0 && (
+      {plafonds.length > 0 && (
         <div className="card" style={{ marginBottom: 20 }}>
           <div className="flex-between" style={{ marginBottom: 10 }}>
             <h2 style={{ margin: 0 }}>Vue d'ensemble — {formatMois(mois)}</h2>
@@ -147,29 +149,38 @@ export function Budgets() {
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-            {statuts.map((s) => (
+            {statuts.map((s) => {
+              const couleur = s.epargne ? (s.ratio >= 1 ? "var(--green)" : "var(--text)") : COULEUR_ETAT[s.etat];
+              const libelle = s.epargne ? (s.ratio >= 1 ? "Objectif atteint" : "Objectif d'épargne") : LABEL_ETAT[s.etat];
+              return (
               <div key={s.categorie_id}>
                 <div className="flex-between" style={{ marginBottom: 6 }}>
                   <span className="flex" style={{ gap: 8 }}>
                     <span className="dot" style={{ background: s.couleur }} />
                     <span style={{ fontWeight: 600 }}>{s.nom}</span>
-                    <span className="badge" style={{ background: `color-mix(in srgb, ${COULEUR_ETAT[s.etat]} 16%, transparent)`, color: COULEUR_ETAT[s.etat] }}>
-                      {LABEL_ETAT[s.etat]}
+                    <span className="badge" style={{ background: `color-mix(in srgb, ${couleur} 16%, transparent)`, color: couleur }}>
+                      {libelle}
                     </span>
                   </span>
                   <span className="num" style={{ fontSize: 13.5 }}>
-                    <strong style={{ color: COULEUR_ETAT[s.etat] }}>{formatMontant(s.depense)}</strong>
+                    <strong style={{ color: couleur }}>{formatMontant(s.depense)}</strong>
                     <span className="muted"> / {formatMontant(s.plafond)}</span>
                   </span>
                 </div>
                 <div className="progress" style={{ height: 9 }}>
-                  <span style={{ width: `${Math.min(100, s.ratio * 100)}%`, background: COULEUR_ETAT[s.etat] }} />
+                  <span style={{ width: `${Math.min(100, s.ratio * 100)}%`, background: s.epargne ? "var(--green)" : COULEUR_ETAT[s.etat] }} />
                 </div>
                 <div className="flex-between" style={{ marginTop: 6 }}>
                   <span className="dim" style={{ fontSize: 12 }}>
-                    {s.reste >= 0
-                      ? `Reste ${formatMontant(s.reste)}`
-                      : `Dépassement de ${formatMontant(-s.reste)}`}
+                    {s.epargne
+                      ? s.reste > 0
+                        ? `Reste ${formatMontant(s.reste)} à épargner ce mois-ci · virements vers tes comptes épargne`
+                        : s.reste < 0
+                          ? `Objectif dépassé de ${formatMontant(-s.reste)} — bravo`
+                          : "Objectif du mois atteint"
+                      : s.reste >= 0
+                        ? `Reste ${formatMontant(s.reste)}`
+                        : `Dépassement de ${formatMontant(-s.reste)}`}
                   </span>
                   <BudgetEditeur
                     categorie_id={s.categorie_id}
@@ -179,7 +190,8 @@ export function Budgets() {
                   />
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

@@ -123,8 +123,8 @@ export function Dashboard() {
   }, [projections, compteSel]);
 
   const budgetsStatut = useMemo(
-    () => statutsBudgets(budgets, categories, transactions, mois),
-    [budgets, categories, transactions, mois]
+    () => statutsBudgets(budgets, categories, transactions, mois, comptes),
+    [budgets, categories, transactions, mois, comptes]
   );
 
   const insights = useMemo(
