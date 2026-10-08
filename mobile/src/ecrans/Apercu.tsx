@@ -6,6 +6,7 @@ import { soldeCompteAvecInitial, soldeGlobal, totauxMois } from "../../../src/li
 import { formatMois, formatMontant, moisCourant } from "../../../src/lib/format";
 import { montantActuelObjectif } from "../../../src/lib/objectifs";
 import { planDuMois } from "../../../src/lib/planMois";
+import { projeterFinDeMois } from "../../../src/lib/projection";
 import type { CompteType } from "../../../src/db/types";
 import { Entete, PuceSync, Vide, ilYaCourt, montantGrand } from "../composants";
 import { useEtat } from "../etat";
@@ -36,6 +37,18 @@ export function Apercu({ onReglages }: { onReglages: () => void }) {
         },
         mois
       ),
+      // Même calcul que le PC ; besoin des échéances (absentes si le PC n'est pas à jour).
+      finDeMois: inst.echeances
+        ? projeterFinDeMois(comptes, transactions, inst.charges, inst.echeances, mois).reduce(
+            (a, p) => ({
+              soldeActuel: a.soldeActuel + p.soldeActuel,
+              charges: a.charges + p.chargesRestantes,
+              variables: a.variables + p.depensesVariablesEstimees,
+              projete: a.projete + p.soldeProjete,
+            }),
+            { soldeActuel: 0, charges: 0, variables: 0, projete: 0 }
+          )
+        : null,
       soldes: comptes.map((c) => ({ c, solde: soldeCompteAvecInitial(c, transactions) })),
       objectifs: inst.objectifs.slice(0, 3).map((o) => {
         const actuel = montantActuelObjectif(o, inst.comptes, transactions, inst.objectifs);
@@ -91,6 +104,37 @@ export function Apercu({ onReglages }: { onReglages: () => void }) {
                 </div>
               </div>
             </div>
+
+            {donnees.finDeMois && (
+              <div className="m-carte">
+                <div className="m-carte-titre">Fin de mois</div>
+                <div className="m-ligne">
+                  <div className="corps">
+                    <div className="nom">Solde actuel</div>
+                  </div>
+                  <div className="montant">{formatMontant(donnees.finDeMois.soldeActuel)}</div>
+                </div>
+                <div className="m-ligne">
+                  <div className="corps">
+                    <div className="nom">Charges fixes restantes</div>
+                  </div>
+                  <div className="montant neg">− {formatMontant(donnees.finDeMois.charges)}</div>
+                </div>
+                <div className="m-ligne">
+                  <div className="corps">
+                    <div className="nom">Dépenses variables</div>
+                    <div className="sous">Estimées · moyenne des 3 derniers mois</div>
+                  </div>
+                  <div className="montant neg">− {formatMontant(donnees.finDeMois.variables)}</div>
+                </div>
+                <div className="m-fin-mois">
+                  <span>Solde projeté</span>
+                  <strong className={donnees.finDeMois.projete < 0 ? "neg" : "pos"}>
+                    {montantGrand(formatMontant(donnees.finDeMois.projete))}
+                  </strong>
+                </div>
+              </div>
+            )}
 
             <div className="m-carte">
               <div className="m-carte-titre">Plan du mois</div>

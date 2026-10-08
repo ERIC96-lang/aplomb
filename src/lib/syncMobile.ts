@@ -27,6 +27,7 @@ import {
   listCategories,
   listChargesFixes,
   listComptes,
+  listEcheances,
   listObjectifs,
   listRegles,
   listTransactions,
@@ -239,7 +240,7 @@ async function enregistrerPhoto(s: SaisieMobile): Promise<string> {
 }
 
 async function publierInstantane(cle: CryptoKey, dossier: string): Promise<void> {
-  const [comptes, categories, transactions, charges, budgets, objectifs, regles] = await Promise.all([
+  const [comptes, categories, transactions, charges, budgets, objectifs, regles, echeances] = await Promise.all([
     listComptes(),
     listCategories(),
     listTransactions(),
@@ -247,6 +248,7 @@ async function publierInstantane(cle: CryptoKey, dossier: string): Promise<void>
     listBudgets(),
     listObjectifs(),
     listRegles(),
+    listEcheances(),
   ]);
   const depuis = subDays(new Date(), JOURS_ACCUSES).toISOString();
   const inst: Instantane = {
@@ -261,6 +263,7 @@ async function publierInstantane(cle: CryptoKey, dossier: string): Promise<void>
     budgets,
     objectifs,
     regles,
+    echeances,
     saisies_integrees: transactions
       .filter((t) => (t.created_at ?? "") >= depuis)
       .map((t) => uuidDepuisOrigine(t.auto_origine))

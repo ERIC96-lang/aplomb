@@ -18,6 +18,7 @@ import type {
   Categorie,
   ChargeFixe,
   Compte,
+  Echeance,
   Objectif,
   RegleCategorisation,
   Transaction,
@@ -44,6 +45,8 @@ export interface Instantane {
   budgets: Budget[];
   objectifs: Objectif[];
   regles: RegleCategorisation[];
+  /** Échéances des charges fixes (statut de paiement) — absent avant la v1.1.24 du PC. */
+  echeances?: Echeance[];
   /** uuid des saisies mobiles déjà intégrées côté PC (accusé de réception). */
   saisies_integrees: string[];
 }

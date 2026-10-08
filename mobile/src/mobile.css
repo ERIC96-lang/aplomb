@@ -1041,3 +1041,22 @@ span.m-touche.vide {
   -webkit-appearance: none;
   appearance: none;
 }
+
+/* Solde projeté de fin de mois. */
+.m-fin-mois {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 4px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-strong);
+  font-weight: 700;
+}
+.m-fin-mois strong {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 760;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
