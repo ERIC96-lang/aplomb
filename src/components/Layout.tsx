@@ -12,21 +12,48 @@ import { CommandPalette } from "./CommandPalette";
 import { ConfirmBar } from "./ConfirmBar";
 import { UpdateBanner } from "./UpdateBanner";
 
-const NAV: { to: string; ico: IconName; label: string; end?: boolean; badge?: string }[] = [
-  { to: "/", ico: "dashboard", label: "Tableau de bord", end: true },
-  { to: "/analyse", ico: "bulb", label: "Analyse" },
-  { to: "/comptes", ico: "bank", label: "Comptes" },
-  { to: "/transactions", ico: "card", label: "Transactions" },
-  { to: "/charges", ico: "repeat", label: "Charges fixes", badge: "charges" },
-  { to: "/budgets", ico: "coins", label: "Budgets", badge: "budgets" },
-  { to: "/objectifs", ico: "target", label: "Objectifs" },
-  { to: "/previsions", ico: "trending-up", label: "Prévisions" },
-  { to: "/echeancier", ico: "calendar", label: "Échéancier" },
-  { to: "/suggestions", ico: "sparkles", label: "Suggestions", badge: "suggestions" },
-  { to: "/factures", ico: "receipt", label: "Factures" },
-  { to: "/import", ico: "upload", label: "Importer" },
-  { to: "/rapports", ico: "report", label: "Rapports" },
-  { to: "/parametres", ico: "settings", label: "Paramètres" },
+interface NavItem {
+  to: string;
+  ico: IconName;
+  label: string;
+  end?: boolean;
+  badge?: string;
+}
+
+// Regroupement thématique pour désencombrer la barre latérale.
+const GROUPES: { titre?: string; items: NavItem[] }[] = [
+  {
+    items: [
+      { to: "/", ico: "dashboard", label: "Tableau de bord", end: true },
+      { to: "/analyse", ico: "bulb", label: "Analyse" },
+    ],
+  },
+  {
+    titre: "Opérations",
+    items: [
+      { to: "/comptes", ico: "bank", label: "Comptes" },
+      { to: "/transactions", ico: "card", label: "Transactions" },
+      { to: "/charges", ico: "repeat", label: "Charges fixes", badge: "charges" },
+      { to: "/suggestions", ico: "sparkles", label: "Suggestions", badge: "suggestions" },
+    ],
+  },
+  {
+    titre: "Planification",
+    items: [
+      { to: "/budgets", ico: "coins", label: "Budgets", badge: "budgets" },
+      { to: "/objectifs", ico: "target", label: "Objectifs" },
+      { to: "/previsions", ico: "trending-up", label: "Prévisions" },
+      { to: "/echeancier", ico: "calendar", label: "Échéancier" },
+    ],
+  },
+  {
+    titre: "Documents",
+    items: [
+      { to: "/factures", ico: "receipt", label: "Factures" },
+      { to: "/import", ico: "upload", label: "Importer" },
+      { to: "/rapports", ico: "report", label: "Rapports" },
+    ],
+  },
 ];
 
 export function Layout() {
@@ -53,39 +80,57 @@ export function Layout() {
 
   return (
     <div className="app">
+      <a href="#contenu" className="skip-link">Aller au contenu</a>
       <aside className="sidebar">
         <div className="brand">
           <span className="logo">
             <Icon name="wallet" size={19} />
           </span>
-          <span>
-            Budget Perso
-            <small>100 % local & privé</small>
-          </span>
+          <span>Aplomb</span>
         </div>
-        {NAV.map((n) => {
-          const b = n.badge ? (badges as Record<string, number>)[n.badge] : 0;
-          return (
-            <NavLink
-              key={n.to}
-              to={n.to}
-              end={n.end}
-              className={({ isActive }) => "nav-link" + (isActive ? " active" : "")}
-            >
-              <span className="ico">
-                <Icon name={n.ico} size={18} />
-              </span>
-              <span>{n.label}</span>
-              {b > 0 && <span className="nav-badge">{b}</span>}
-            </NavLink>
-          );
-        })}
-        <div className="sidebar-foot">
-          {version && (
-            <div style={{ textAlign: "center", fontSize: 11, color: "var(--text-dim)" }}>
-              version {version}
+        <nav className="sidebar-nav" aria-label="Navigation principale">
+          {GROUPES.map((g, gi) => (
+            <div className="nav-group" key={g.titre ?? gi}>
+              {g.titre && <div className="nav-group-label">{g.titre}</div>}
+              {g.items.map((n) => {
+                const b = n.badge ? (badges as Record<string, number>)[n.badge] : 0;
+                return (
+                  <NavLink
+                    key={n.to}
+                    to={n.to}
+                    end={n.end}
+                    className={({ isActive }) => "nav-link" + (isActive ? " active" : "")}
+                  >
+                    <span className="ico" aria-hidden="true">
+                      <Icon name={n.ico} size={18} />
+                    </span>
+                    <span>{n.label}</span>
+                    {b > 0 && <span className="nav-badge" aria-label={`${b} à traiter`}>{b}</span>}
+                  </NavLink>
+                );
+              })}
             </div>
-          )}
+          ))}
+        </nav>
+        <div className="sidebar-foot">
+          <NavLink
+            to="/aide"
+            className={({ isActive }) => "nav-link" + (isActive ? " active" : "")}
+          >
+            <span className="ico" aria-hidden="true">
+              <Icon name="help" size={18} />
+            </span>
+            <span>Aide</span>
+          </NavLink>
+          <NavLink
+            to="/parametres"
+            className={({ isActive }) => "nav-link" + (isActive ? " active" : "")}
+          >
+            <span className="ico" aria-hidden="true">
+              <Icon name="settings" size={18} />
+            </span>
+            <span>Paramètres</span>
+          </NavLink>
           {pinDefini && (
             <button className="theme-toggle" onClick={verrouiller}>
               <Icon name="lock" size={16} />
@@ -97,9 +142,14 @@ export function Layout() {
             {theme === "dark" ? "Sombre" : "Clair"}
             <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--text-dim)" }}>changer</span>
           </button>
+          {version && (
+            <div style={{ textAlign: "center", fontSize: 10.5, color: "var(--text-dim)", marginTop: 2 }}>
+              version {version}
+            </div>
+          )}
         </div>
       </aside>
-      <main className="main">
+      <main className="main" id="contenu">
         <UpdateBanner />
         <ConfirmBar />
         <Outlet />

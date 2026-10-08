@@ -11,12 +11,12 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), "..");
-const OWNER_REPO = "ERIC96-lang/budget-perso";
-const NOM_STABLE = "budget-perso_x64-setup.exe";
+const OWNER_REPO = "ERIC96-lang/aplomb";
+const NOM_STABLE = "aplomb_x64-setup.exe";
 
 const conf = JSON.parse(readFileSync(join(RACINE, "src-tauri/tauri.conf.json"), "utf8"));
 const version = conf.version;
-const notes = process.argv[2] || `Version ${version} de Budget Perso.`;
+const notes = process.argv[2] || `Version ${version} d'Aplomb.`;
 
 const nsisDir = join(RACINE, "src-tauri/target/release/bundle/nsis");
 const fichiers = readdirSync(nsisDir);

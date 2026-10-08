@@ -1,68 +1,138 @@
 import { useMemo, useState } from "react";
 import { addMonths, format } from "date-fns";
 import { useAppData } from "../state/AppDataContext";
-import { repartitionDepenses, soldeGlobal, totauxMois } from "../lib/calculs";
+import { useToast } from "../state/ToastContext";
+import {
+  repartitionDepenses,
+  repartitionDepensesPeriode,
+  soldeGlobal,
+  totauxMois,
+  totauxPeriode,
+} from "../lib/calculs";
 import { pointsFluxAnnee } from "../lib/series";
 import { CategorieBars, FluxBarChart } from "../components/charts";
 import { Icon } from "../components/Icon";
-import { formatMontant, formatMois, moisCourant } from "../lib/format";
+import { genererRapportPdf } from "../lib/pdf";
+import { aujourdhui, formatDate, formatMontant, formatMois, moisCourant } from "../lib/format";
+
+type TypeRapport = "mensuel" | "annuel" | "periode";
 
 export function Rapports() {
   const { comptes, transactions, categories } = useAppData();
-  const [type, setType] = useState<"mensuel" | "annuel">("mensuel");
+  const toast = useToast();
+  const [type, setType] = useState<TypeRapport>("mensuel");
   const [mois, setMois] = useState(moisCourant());
   const [annee, setAnnee] = useState(new Date().getFullYear());
+  const [debut, setDebut] = useState(`${moisCourant()}-01`);
+  const [fin, setFin] = useState(aujourdhui());
+
+  /** Données consolidées du rapport courant (pour l'export PDF). */
+  function donneesRapport() {
+    if (type === "mensuel") {
+      return {
+        titre: "Rapport mensuel",
+        periode: formatMois(mois),
+        t: totauxMois(transactions, mois),
+        rep: repartitionDepenses(transactions, categories, mois),
+      };
+    }
+    if (type === "annuel") {
+      return {
+        titre: "Rapport annuel",
+        periode: String(annee),
+        t: totauxMois(transactions, String(annee)),
+        rep: repartitionDepenses(transactions, categories, String(annee)),
+      };
+    }
+    return {
+      titre: "Rapport",
+      periode: `${formatDate(debut)} – ${formatDate(fin)}`,
+      t: totauxPeriode(transactions, debut, fin),
+      rep: repartitionDepensesPeriode(transactions, categories, debut, fin),
+    };
+  }
+
+  async function telechargerPdf() {
+    const d = donneesRapport();
+    const ok = await genererRapportPdf({
+      titre: d.titre,
+      periode: d.periode,
+      revenus: d.t.revenus,
+      depenses: d.t.depenses,
+      solde: d.t.solde,
+      repartition: d.rep.map((r) => ({ nom: r.nom, montant: r.montant })),
+    });
+    if (ok) toast("Rapport PDF généré");
+  }
 
   return (
     <>
       <div className="page-head">
         <div>
           <h1>Rapports</h1>
-          <div className="sub">Synthèses mensuelles et annuelles, prêtes à imprimer ou exporter en PDF</div>
+          <div className="sub">Synthèses mensuelles, annuelles ou sur une période, à imprimer ou exporter en PDF</div>
         </div>
-        <div className="flex no-print" style={{ gap: 10 }}>
+        <div className="flex no-print" style={{ gap: 10, flexWrap: "wrap" }}>
           <div className="segmented">
-            <button className={type === "mensuel" ? "active" : ""} onClick={() => setType("mensuel")}>
-              Mensuel
-            </button>
-            <button className={type === "annuel" ? "active" : ""} onClick={() => setType("annuel")}>
-              Annuel
-            </button>
+            <button className={type === "mensuel" ? "active" : ""} onClick={() => setType("mensuel")}>Mensuel</button>
+            <button className={type === "annuel" ? "active" : ""} onClick={() => setType("annuel")}>Annuel</button>
+            <button className={type === "periode" ? "active" : ""} onClick={() => setType("periode")}>Période</button>
           </div>
-          {type === "mensuel" ? (
-            <input
-              className="input"
-              type="month"
-              style={{ width: 170 }}
-              value={mois}
-              onChange={(e) => e.target.value && setMois(e.target.value)}
-            />
-          ) : (
-            <input
-              className="input"
-              type="number"
-              style={{ width: 110 }}
-              value={annee}
-              onChange={(e) => setAnnee(Number(e.target.value))}
-            />
+          {type === "mensuel" && (
+            <input className="input" type="month" style={{ width: 160 }} value={mois} onChange={(e) => e.target.value && setMois(e.target.value)} />
           )}
-          <button className="btn primary" onClick={() => window.print()}>
-            <Icon name="printer" size={16} /> Imprimer / PDF
+          {type === "annuel" && (
+            <input className="input" type="number" style={{ width: 100 }} value={annee} onChange={(e) => setAnnee(Number(e.target.value))} />
+          )}
+          {type === "periode" && (
+            <>
+              <input className="input" type="date" style={{ width: 150 }} value={debut} onChange={(e) => setDebut(e.target.value)} />
+              <input className="input" type="date" style={{ width: 150 }} value={fin} onChange={(e) => setFin(e.target.value)} />
+            </>
+          )}
+          <button className="btn" onClick={() => window.print()}>
+            <Icon name="printer" size={16} /> Imprimer
+          </button>
+          <button className="btn primary" onClick={telechargerPdf}>
+            <Icon name="download" size={16} /> Export PDF
           </button>
         </div>
       </div>
 
-      {type === "mensuel" ? (
-        <RapportMensuel mois={mois} transactions={transactions} categories={categories} />
-      ) : (
-        <RapportAnnuel
-          annee={annee}
-          comptes={comptes}
-          transactions={transactions}
-          categories={categories}
-        />
-      )}
+      {type === "mensuel" && <RapportMensuel mois={mois} transactions={transactions} categories={categories} />}
+      {type === "annuel" && <RapportAnnuel annee={annee} comptes={comptes} transactions={transactions} categories={categories} />}
+      {type === "periode" && <RapportPeriode debut={debut} fin={fin} transactions={transactions} categories={categories} />}
     </>
+  );
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function RapportPeriode({ debut, fin, transactions, categories }: any) {
+  const t = useMemo(() => totauxPeriode(transactions, debut, fin), [transactions, debut, fin]);
+  const rep = useMemo(
+    () => repartitionDepensesPeriode(transactions, categories, debut, fin),
+    [transactions, categories, debut, fin]
+  );
+  const taux = t.revenus > 0 ? (t.solde / t.revenus) * 100 : 0;
+  return (
+    <div className="animate-in">
+      <div className="card" style={{ marginBottom: 16 }}>
+        <div className="flex-between">
+          <h2 style={{ margin: 0 }}>{formatDate(debut)} – {formatDate(fin)}</h2>
+          <span className="chip" style={{ background: "var(--brand-grad-soft)" }}>Période personnalisée</span>
+        </div>
+      </div>
+      <div className="grid grid-auto" style={{ marginBottom: 16 }}>
+        <Bloc label="Revenus" value={t.revenus} tone="pos" />
+        <Bloc label="Dépenses" value={t.depenses} tone="neg" />
+        <Bloc label="Épargne" value={t.solde} tone={t.solde >= 0 ? "pos" : "neg"} />
+        <Bloc label="Taux d'épargne" value={taux} suffix=" %" raw />
+      </div>
+      <div className="card">
+        <h2>Répartition des dépenses</h2>
+        {rep.length === 0 ? <p className="muted">Aucune dépense sur cette période.</p> : <CategorieBars data={rep} />}
+      </div>
+    </div>
   );
 }
 

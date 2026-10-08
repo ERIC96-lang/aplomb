@@ -35,6 +35,12 @@ import {
   envoyerAlertes,
 } from "../lib/notifications";
 import { getDevise, setDevise as appliquerDevise } from "../lib/format";
+import { programmerPublication, synchroniserMobile } from "../lib/syncMobile";
+import { consoliderBase } from "../db";
+
+/** Intervalle de relève des saisies de l'iPhone (le dossier OneDrive est local : coût négligeable). */
+const INTERVALLE_SYNC_MS = 90_000;
+const INTERVALLE_CONSOLIDATION_MS = 120_000;
 
 interface AppData {
   comptes: Compte[];
@@ -91,7 +97,41 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setSuggestions(sug);
     setBudgets(bud);
     setObjectifs(obj);
+    // Toute modification est republiée vers l'iPhone (si la synchro est activée).
+    programmerPublication();
   }, []);
+
+  // Consolidation régulière du journal SQLite dans la base (voir consoliderBase).
+  useEffect(() => {
+    if (!pret) return;
+    const id = setInterval(() => void consoliderBase(), INTERVALLE_CONSOLIDATION_MS);
+    const enArrierePlan = () => {
+      if (document.visibilityState === "hidden") void consoliderBase();
+    };
+    document.addEventListener("visibilitychange", enArrierePlan);
+    window.addEventListener("blur", enArrierePlan);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", enArrierePlan);
+      window.removeEventListener("blur", enArrierePlan);
+    };
+  }, [pret]);
+
+  // Relève périodique des saisies de l'iPhone + au retour sur la fenêtre.
+  useEffect(() => {
+    if (!pret) return;
+    const relever = () =>
+      synchroniserMobile()
+        .then((r) => (r.integrees > 0 ? rafraichir() : undefined))
+        .catch(() => {});
+    void relever();
+    const id = setInterval(relever, INTERVALLE_SYNC_MS);
+    window.addEventListener("focus", relever);
+    return () => {
+      clearInterval(id);
+      window.removeEventListener("focus", relever);
+    };
+  }, [pret, rafraichir]);
 
   useEffect(() => {
     (async () => {

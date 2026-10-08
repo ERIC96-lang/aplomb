@@ -23,6 +23,8 @@ export interface Transaction {
   created_at: string;
   a_confirmer: number; // 1 = générée automatiquement, en attente de validation
   auto_origine: string | null; // ex. "salaire", "charge:12"
+  pointee: number; // 1 = rapprochée avec le relevé bancaire
+  justificatif_path: string | null; // PDF joint (chemin relatif)
 }
 
 export type CategorieType = "revenu" | "depense";
@@ -97,6 +99,7 @@ export interface Objectif {
   date_cible: string | null; // 'YYYY-MM-DD'
   couleur: string;
   cree_le: string;
+  compte_id: number | null; // si défini : progression suivie automatiquement sur le solde du compte
 }
 
 export type FactureType = "recu" | "facture";

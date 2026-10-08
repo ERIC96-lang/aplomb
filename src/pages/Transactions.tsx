@@ -3,6 +3,9 @@ import { useAppData } from "../state/AppDataContext";
 import { useToast } from "../state/ToastContext";
 import { TransactionModal } from "../components/TransactionModal";
 import { Icon } from "../components/Icon";
+import { pointerTransaction, type TransactionInput } from "../db/repo";
+import { soldeCompteAvecInitial } from "../lib/calculs";
+import { scannerRecu } from "../lib/ocr";
 import { formatDate, formatMontant, formatMois } from "../lib/format";
 import { moisDisponibles } from "../lib/calculs";
 import type { Transaction, TxType } from "../db/types";
@@ -17,6 +20,29 @@ export function Transactions() {
   const { transactions, comptes, categories, rafraichir } = useAppData();
   const toast = useToast();
   const [modal, setModal] = useState<Transaction | "new" | null>(null);
+  const [presets, setPresets] = useState<Partial<TransactionInput> | undefined>(undefined);
+  const [scanEnCours, setScanEnCours] = useState(false);
+
+  async function scannerUnRecu() {
+    setScanEnCours(true);
+    try {
+      const r = await scannerRecu();
+      if (!r) return; // annulé
+      setPresets({
+        type: "depense",
+        montant: r.montant ?? undefined,
+        date: r.date ?? undefined,
+        description: r.description ?? undefined,
+        compte_id: comptes[0]?.id,
+      } as Partial<TransactionInput>);
+      setModal("new");
+      toast(r.montant != null ? "Reçu lu — vérifie les champs" : "Reçu lu — montant à compléter");
+    } catch (e) {
+      toast(e instanceof Error ? `Lecture impossible : ${e.message}` : "Lecture du reçu impossible");
+    } finally {
+      setScanEnCours(false);
+    }
+  }
 
   const [fMois, setFMois] = useState<string>("tous");
   const [fCompte, setFCompte] = useState<string>("tous");
@@ -24,6 +50,7 @@ export function Transactions() {
   const [fTexte, setFTexte] = useState<string>("");
   const [fMin, setFMin] = useState<string>("");
   const [fMax, setFMax] = useState<string>("");
+  const [fPointee, setFPointee] = useState<string>("tous");
 
   const compteNom = useMemo(
     () => new Map(comptes.map((c) => [c.id, c.nom])),
@@ -48,6 +75,8 @@ export function Transactions() {
       }
       if (!isNaN(min) && t.montant < min) return false;
       if (!isNaN(max) && t.montant > max) return false;
+      if (fPointee === "oui" && t.pointee !== 1) return false;
+      if (fPointee === "non" && t.pointee === 1) return false;
       if (texte) {
         const cat = t.categorie_id != null ? (catById.get(t.categorie_id)?.nom ?? "") : "";
         const hay = `${t.description ?? ""} ${cat}`.toLowerCase();
@@ -55,7 +84,19 @@ export function Transactions() {
       }
       return true;
     });
-  }, [transactions, fMois, fType, fCompte, fTexte, fMin, fMax, catById]);
+  }, [transactions, fMois, fType, fCompte, fTexte, fMin, fMax, fPointee, catById]);
+
+  // Rapprochement : quand un compte précis est sélectionné, solde pointé vs solde réel.
+  const rapprochement = useMemo(() => {
+    if (fCompte === "tous") return null;
+    const id = Number(fCompte);
+    const c = comptes.find((x) => x.id === id);
+    if (!c) return null;
+    const pointees = transactions.filter((t) => t.pointee === 1);
+    const soldePointe = soldeCompteAvecInitial(c, pointees);
+    const soldeReel = soldeCompteAvecInitial(c, transactions);
+    return { soldePointe, soldeReel, ecart: soldeReel - soldePointe };
+  }, [fCompte, comptes, transactions]);
 
   return (
     <>
@@ -67,14 +108,24 @@ export function Transactions() {
             {filtres.length > 1 ? "s" : ""}
           </div>
         </div>
-        <button
-          className="btn primary"
-          onClick={() => setModal("new")}
-          disabled={comptes.length === 0}
-          title={comptes.length === 0 ? "Crée d'abord un compte" : ""}
-        >
-          <Icon name="plus" size={16} /> Nouvelle transaction
-        </button>
+        <div className="flex" style={{ gap: 10 }}>
+          <button
+            className="btn"
+            onClick={scannerUnRecu}
+            disabled={comptes.length === 0 || scanEnCours}
+            title={comptes.length === 0 ? "Crée d'abord un compte" : "Lire un reçu (photo/scan) et pré-remplir"}
+          >
+            <Icon name="receipt" size={16} /> {scanEnCours ? "Lecture…" : "Scanner un reçu"}
+          </button>
+          <button
+            className="btn primary"
+            onClick={() => { setPresets(undefined); setModal("new"); }}
+            disabled={comptes.length === 0}
+            title={comptes.length === 0 ? "Crée d'abord un compte" : ""}
+          >
+            <Icon name="plus" size={16} /> Nouvelle transaction
+          </button>
+        </div>
       </div>
 
       <div className="card" style={{ marginBottom: 16 }}>
@@ -101,6 +152,11 @@ export function Transactions() {
             <option value="depense">Dépenses</option>
             <option value="virement">Virements</option>
           </select>
+          <select className="select" style={{ maxWidth: 180 }} value={fPointee} onChange={(e) => setFPointee(e.target.value)}>
+            <option value="tous">Pointées & non</option>
+            <option value="oui">Pointées</option>
+            <option value="non">Non pointées</option>
+          </select>
           <input
             className="input"
             style={{ maxWidth: 240 }}
@@ -124,17 +180,31 @@ export function Transactions() {
             value={fMax}
             onChange={(e) => setFMax(e.target.value)}
           />
-          {(fTexte || fMin || fMax || fMois !== "tous" || fCompte !== "tous" || fType !== "tous") && (
+          {(fTexte || fMin || fMax || fMois !== "tous" || fCompte !== "tous" || fType !== "tous" || fPointee !== "tous") && (
             <button
               className="btn"
               onClick={() => {
-                setFTexte(""); setFMin(""); setFMax(""); setFMois("tous"); setFCompte("tous"); setFType("tous");
+                setFTexte(""); setFMin(""); setFMax(""); setFMois("tous"); setFCompte("tous"); setFType("tous"); setFPointee("tous");
               }}
             >
               Réinitialiser
             </button>
           )}
         </div>
+        {rapprochement && (
+          <div className="flex" style={{ gap: 18, marginTop: 12, flexWrap: "wrap", fontSize: 13 }}>
+            <span className="muted">Rapprochement :</span>
+            <span>Solde pointé <strong className="num">{formatMontant(rapprochement.soldePointe)}</strong></span>
+            <span>Solde réel <strong className="num">{formatMontant(rapprochement.soldeReel)}</strong></span>
+            <span>
+              Écart{" "}
+              <strong className="num" style={{ color: Math.abs(rapprochement.ecart) < 0.005 ? "var(--green)" : "var(--amber)" }}>
+                {formatMontant(rapprochement.ecart)}
+              </strong>
+              {Math.abs(rapprochement.ecart) < 0.005 ? " ✓" : " (non pointé)"}
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="card">
@@ -150,6 +220,7 @@ export function Transactions() {
             <table className="data">
               <thead>
                 <tr>
+                  <th title="Pointée (rapprochée avec le relevé)" style={{ width: 34 }}></th>
                   <th>Date</th>
                   <th>Type</th>
                   <th>Description</th>
@@ -167,6 +238,25 @@ export function Transactions() {
                       style={{ cursor: "pointer" }}
                       onClick={() => setModal(t)}
                     >
+                      <td onClick={(e) => e.stopPropagation()} style={{ textAlign: "center" }}>
+                        <button
+                          className="pointage"
+                          title={t.pointee === 1 ? "Pointée — cliquer pour dé-pointer" : "Marquer comme pointée"}
+                          aria-pressed={t.pointee === 1}
+                          onClick={async () => {
+                            await pointerTransaction(t.id, t.pointee !== 1);
+                            await rafraichir();
+                          }}
+                          style={{
+                            width: 18, height: 18, borderRadius: "50%", cursor: "pointer",
+                            border: "2px solid " + (t.pointee === 1 ? "var(--green)" : "var(--border-strong)"),
+                            background: t.pointee === 1 ? "var(--green)" : "transparent",
+                            display: "grid", placeItems: "center", color: "#fff", padding: 0,
+                          }}
+                        >
+                          {t.pointee === 1 && <Icon name="check" size={11} strokeWidth={3} />}
+                        </button>
+                      </td>
                       <td>{formatDate(t.date)}</td>
                       <td>
                         <span className={`badge type-${t.type}`}>
@@ -175,6 +265,11 @@ export function Transactions() {
                       </td>
                       <td>
                         {t.description || <span className="muted">—</span>}
+                        {t.justificatif_path && (
+                          <span title="Justificatif joint" style={{ marginLeft: 6, color: "var(--text-muted)" }}>
+                            <Icon name="paperclip" size={12} />
+                          </span>
+                        )}
                         {t.a_confirmer === 1 && (
                           <span className="badge payee_sans_justif" style={{ marginLeft: 8 }}>à confirmer</span>
                         )}
@@ -188,7 +283,13 @@ export function Transactions() {
                       </td>
                       <td>
                         {cat ? (
-                          <span className="chip" style={{ background: cat.couleur + "22", color: cat.couleur }}>
+                          <span
+                            className="chip"
+                            style={{
+                              background: cat.couleur + "22",
+                              color: `color-mix(in srgb, ${cat.couleur} 66%, var(--text))`,
+                            }}
+                          >
                             <span className="dot" style={{ background: cat.couleur }} />
                             {cat.nom}
                           </span>
@@ -221,9 +322,11 @@ export function Transactions() {
       {modal && (
         <TransactionModal
           transaction={modal === "new" ? null : modal}
-          onClose={() => setModal(null)}
+          presets={modal === "new" ? presets : undefined}
+          onClose={() => { setModal(null); setPresets(undefined); }}
           onSaved={async () => {
             setModal(null);
+            setPresets(undefined);
             await rafraichir();
             toast("Transaction enregistrée");
           }}

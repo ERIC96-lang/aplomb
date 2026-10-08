@@ -126,7 +126,7 @@ export function Previsions() {
                   <tr key={p.objectif.id}>
                     <td style={{ fontWeight: 600 }}>{p.objectif.nom}</td>
                     <td>{p.objectif.date_cible ? formatMois(p.objectif.date_cible.slice(0, 7)) : "—"} ({p.moisRestants} mois)</td>
-                    <td className="right num">{formatMontant(Math.max(0, p.objectif.montant_cible - p.objectif.montant_actuel))}</td>
+                    <td className="right num">{formatMontant(p.reste)}</td>
                     <td className="right num" style={{ fontWeight: 700, color: "var(--accent)" }}>{formatMontant(p.requisMensuel)}</td>
                   </tr>
                 ))}

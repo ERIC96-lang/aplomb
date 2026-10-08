@@ -104,9 +104,69 @@ export function repartitionDepenses(
   return res.sort((a, b) => b.montant - a.montant);
 }
 
+/** Totaux revenus/dépenses sur une plage de dates [from, to] (bornes incluses). Virements exclus. */
+export function totauxPeriode(
+  transactions: Transaction[],
+  from: string,
+  to: string,
+  compteId?: number
+): Totaux {
+  let revenus = 0;
+  let depenses = 0;
+  for (const t of transactions) {
+    if (t.type === "virement") continue;
+    if (t.date < from || t.date > to) continue;
+    if (compteId !== undefined && t.compte_id !== compteId) continue;
+    if (t.type === "revenu") revenus += t.montant;
+    else depenses += t.montant;
+  }
+  return { revenus, depenses, solde: revenus - depenses };
+}
+
+/** Répartition des dépenses sur une plage de dates [from, to]. */
+export function repartitionDepensesPeriode(
+  transactions: Transaction[],
+  categories: Categorie[],
+  from: string,
+  to: string,
+  compteId?: number
+): PartCategorie[] {
+  const parCat = new Map<number | null, number>();
+  for (const t of transactions) {
+    if (t.type !== "depense") continue;
+    if (t.date < from || t.date > to) continue;
+    if (compteId !== undefined && t.compte_id !== compteId) continue;
+    parCat.set(t.categorie_id, (parCat.get(t.categorie_id) ?? 0) + t.montant);
+  }
+  const byId = new Map(categories.map((c) => [c.id, c]));
+  const res: PartCategorie[] = [];
+  for (const [catId, montant] of parCat) {
+    const cat = catId != null ? byId.get(catId) : undefined;
+    res.push({
+      categorie_id: catId,
+      nom: cat?.nom ?? "Sans catégorie",
+      couleur: cat?.couleur ?? "#94a3b8",
+      montant,
+    });
+  }
+  return res.sort((a, b) => b.montant - a.montant);
+}
+
 /** Liste triée des mois 'YYYY-MM' présents dans l'historique (récent -> ancien). */
 export function moisDisponibles(transactions: Transaction[]): string[] {
   const set = new Set<string>();
   for (const t of transactions) set.add(t.date.slice(0, 7));
   return Array.from(set).sort().reverse();
+}
+
+/**
+ * Variation en % entre deux valeurs (tendances du tableau de bord). Renvoie
+ * null quand elle n'a pas de sens : base nulle à l'arrondi du centime près
+ * (un reliquat de virgule flottante comme 0,000001 donnait des milliards de %)
+ * ou variation au-delà de ±999 %.
+ */
+export function variationPct(cur: number, prev: number): number | null {
+  if (!Number.isFinite(cur) || !Number.isFinite(prev) || Math.abs(prev) < 0.005) return null;
+  const v = ((cur - prev) / Math.abs(prev)) * 100;
+  return Math.abs(v) > 999 ? null : v;
 }

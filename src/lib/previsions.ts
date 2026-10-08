@@ -2,6 +2,7 @@ import { addMonths, differenceInCalendarMonths, format } from "date-fns";
 import { fr } from "date-fns/locale";
 import type { ChargeFixe, Compte, Objectif, Transaction } from "../db/types";
 import { soldeGlobal } from "./calculs";
+import { montantActuelObjectif } from "./objectifs";
 import { pointsFluxMensuel } from "./series";
 import { grouperParMois, prochainesOccurrences } from "./echeancier";
 import type { Profil } from "./profil";
@@ -18,6 +19,7 @@ export interface MoisPrevision {
 
 export interface PlanObjectif {
   objectif: Objectif;
+  reste: number; // montant restant à épargner (tient compte du suivi auto sur compte)
   requisMensuel: number; // pour tenir la date cible
   moisRestants: number | null;
 }
@@ -108,10 +110,11 @@ export function calculerPrevisions(
 
   // Plans d'épargne pour les objectifs datés.
   const plans: PlanObjectif[] = objectifs.map((o) => {
-    const reste = Math.max(0, o.montant_cible - o.montant_actuel);
-    if (!o.date_cible) return { objectif: o, requisMensuel: 0, moisRestants: null };
+    const actuel = montantActuelObjectif(o, comptes, transactions);
+    const reste = Math.max(0, o.montant_cible - actuel);
+    if (!o.date_cible) return { objectif: o, reste, requisMensuel: 0, moisRestants: null };
     const moisRestants = Math.max(1, differenceInCalendarMonths(new Date(o.date_cible), today));
-    return { objectif: o, requisMensuel: reste / moisRestants, moisRestants };
+    return { objectif: o, reste, requisMensuel: reste / moisRestants, moisRestants };
   });
 
   const epargneRecommandee = plans.reduce((a, p) => a + p.requisMensuel, 0);

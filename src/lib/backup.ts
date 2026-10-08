@@ -109,6 +109,37 @@ export async function preparerRestauration(): Promise<boolean> {
   return true;
 }
 
+/** Sauvegarde chiffrée la plus récente : nom de fichier et date lisible, ou null. */
+export async function derniereSauvegarde(): Promise<{ nom: string; date: Date } | null> {
+  try {
+    const noms = (await readDir("sauvegardes", { baseDir: BaseDirectory.AppData }))
+      .map((e) => e.name)
+      .filter((n) => /^budget-\d{8}-\d{6}\.db\.enc$/.test(n))
+      .sort();
+    const nom = noms[noms.length - 1];
+    if (!nom) return null;
+    const [, a, mo, j, h, mi, s] = nom.match(/(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})/)!;
+    return { nom, date: new Date(+a, +mo - 1, +j, +h, +mi, +s) };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Prépare la restauration de la sauvegarde la plus récente (remplacement au
+ * prochain démarrage, côté Rust). Utilisé quand la base est endommagée.
+ */
+export async function preparerRestaurationDerniere(): Promise<boolean> {
+  const derniere = await derniereSauvegarde();
+  if (!derniere) return false;
+  const base = await appDataDir();
+  await invoke("dechiffrer_fichier", {
+    source: await join(base, "sauvegardes", derniere.nom),
+    dest: await join(base, "restore.pending"),
+  });
+  return true;
+}
+
 function champCsv(v: string | number | null): string {
   const s = v == null ? "" : String(v);
   if (/[";\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;

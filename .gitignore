@@ -3,6 +3,7 @@ node_modules
 # build front
 dist
 dist-ssr
+dist-mobile
 # build Rust / Tauri
 src-tauri/target
 # logs & divers
@@ -13,3 +14,5 @@ src-tauri/target
 .tauri/*.key
 # artefacts de release (installeur + latest.json à téléverser)
 release
+# artefacts TypeScript
+*.tsbuildinfo

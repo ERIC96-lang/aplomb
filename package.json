@@ -1,7 +1,7 @@
 {
   "name": "budget-perso-app",
   "private": true,
-  "version": "1.1.4",
+  "version": "1.1.22",
   "type": "module",
   "description": "Application de bureau locale de gestion de budget personnel",
   "scripts": {
@@ -14,9 +14,15 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "release:prepare": "node scripts/preparer-release.mjs",
-    "icons": "tauri icon src-tauri/icon-source.png"
+    "icons": "tauri icon src-tauri/icon-source.png",
+    "mobile:dev": "vite --config vite.mobile.config.ts",
+    "mobile:build": "tsc && vite build --config vite.mobile.config.ts",
+    "mobile:publier": "node scripts/publier-mobile.mjs"
   },
   "dependencies": {
+    "@azure/msal-browser": "^5.25.0",
+    "@fontsource-variable/inter": "^5.3.0",
+    "@fontsource-variable/plus-jakarta-sans": "^5.3.0",
     "@tauri-apps/api": "^2.1.1",
     "@tauri-apps/plugin-dialog": "^2.2.0",
     "@tauri-apps/plugin-fs": "^2.2.0",
@@ -28,6 +34,8 @@
     "@tauri-apps/plugin-updater": "^2.11.0",
     "date-fns": "^4.1.0",
     "jspdf": "^4.2.1",
+    "jsqr": "^1.4.0",
+    "qrcode-generator": "^2.0.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.28.0",

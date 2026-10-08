@@ -6,6 +6,7 @@ import {
   totauxMois,
   repartitionDepenses,
   moisDisponibles,
+  variationPct,
 } from "./calculs";
 import type { Categorie, Compte, Transaction, TxType } from "../db/types";
 
@@ -20,7 +21,7 @@ function tx(p: Partial<Transaction> & { type: TxType; montant: number }): Transa
     categorie_id: null,
     created_at: "2026-03-10T00:00:00Z",
     a_confirmer: 0,
-    auto_origine: null,
+    auto_origine: null, pointee: 0, justificatif_path: null,
     ...p,
   };
 }
@@ -126,5 +127,21 @@ describe("moisDisponibles", () => {
       tx({ type: "depense", montant: 1, date: "2026-01-20" }),
     ];
     expect(moisDisponibles(t)).toEqual(["2026-03", "2026-01"]);
+  });
+});
+
+describe("variationPct", () => {
+  it("calcule une variation normale", () => {
+    expect(variationPct(110, 100)).toBeCloseTo(10);
+    expect(variationPct(50, -100)).toBeCloseTo(150);
+  });
+  it("ignore une base nulle ou un reliquat de virgule flottante", () => {
+    expect(variationPct(1560, 0)).toBeNull();
+    expect(variationPct(1560, 5.9e-8)).toBeNull();
+    expect(variationPct(1560, -0.004)).toBeNull();
+  });
+  it("masque les variations sans signification (> 999 %)", () => {
+    expect(variationPct(1560, 1)).toBeNull();
+    expect(variationPct(Number.NaN, 10)).toBeNull();
   });
 });

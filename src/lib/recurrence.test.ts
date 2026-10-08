@@ -6,7 +6,7 @@ let seq = 1;
 function tx(p: Partial<Transaction> & { type: TxType; montant: number; date: string }): Transaction {
   return {
     id: seq++, description: "Netflix", compte_id: 1, compte_dest_id: null,
-    categorie_id: 5, created_at: "", a_confirmer: 0, auto_origine: null, ...p,
+    categorie_id: 5, created_at: "", a_confirmer: 0, auto_origine: null, pointee: 0, justificatif_path: null, ...p,
   };
 }
 

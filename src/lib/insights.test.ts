@@ -5,7 +5,7 @@ import type { Categorie, Compte, Transaction, TxType } from "../db/types";
 let seq = 1;
 const tx = (montant: number, categorie_id: number, date: string, p: Partial<Transaction> = {}): Transaction => ({
   id: seq++, type: "depense" as TxType, montant, date, description: null, compte_id: 1,
-  compte_dest_id: null, categorie_id, created_at: "", a_confirmer: 0, auto_origine: null, ...p,
+  compte_dest_id: null, categorie_id, created_at: "", a_confirmer: 0, auto_origine: null, pointee: 0, justificatif_path: null, ...p,
 });
 const cats: Categorie[] = [
   { id: 1, nom: "Alimentation", type: "depense", couleur: "#f00" },

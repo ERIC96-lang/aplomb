@@ -5,6 +5,7 @@ import { useLock } from "../state/LockContext";
 import { verifierPin } from "../lib/pin";
 import { Modal } from "../components/Modal";
 import { Icon } from "../components/Icon";
+import { SyncMobileCard } from "../components/SyncMobileCard";
 import {
   appliquerReglesExistant,
   creerCategorie,
@@ -387,6 +388,8 @@ export function Parametres() {
         </div>
       </div>
 
+      <SyncMobileCard />
+
       <div className="card" style={{ marginTop: 20 }}>
         <h2>Sécurité — code PIN</h2>
         <p className="muted" style={{ fontSize: 13, marginTop: -8 }}>
@@ -462,10 +465,10 @@ export function Parametres() {
       <div className="card" style={{ marginTop: 20 }}>
         <h2>À propos</h2>
         <p className="muted" style={{ fontSize: 13 }}>
-          Budget Perso v1 — application 100 % locale. Aucune donnée n'est envoyée
-          en ligne, aucune connexion bancaire. Confidentialité : évite de placer le
-          dossier de données dans un emplacement synchronisé publiquement
-          (OneDrive / Google Drive).
+          Aplomb. Vos données restent sur cet appareil, sans aucune connexion
+          bancaire ; seule l'application iPhone, si vous l'activez, les fait transiter par
+          votre OneDrive, chiffrées de bout en bout. Conseil : évitez de placer le dossier de
+          données de l'app dans un emplacement synchronisé publiquement.
         </p>
       </div>
 
@@ -715,7 +718,12 @@ function CategorieList({
         <button
           key={c.id}
           className="chip"
-          style={{ background: c.couleur + "22", color: c.couleur, cursor: "pointer", border: "none" }}
+          style={{
+            background: c.couleur + "22",
+            color: `color-mix(in srgb, ${c.couleur} 66%, var(--text))`,
+            cursor: "pointer",
+            border: "none",
+          }}
           onClick={() => onEdit(c)}
         >
           <span className="dot" style={{ background: c.couleur }} />

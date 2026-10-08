@@ -201,6 +201,19 @@ export async function supprimerTransaction(id: number): Promise<void> {
   await db.execute("DELETE FROM transactions WHERE id = ?", [id]);
 }
 
+export async function pointerTransaction(id: number, pointee: boolean): Promise<void> {
+  const db = await getDb();
+  await db.execute("UPDATE transactions SET pointee = ? WHERE id = ?", [pointee ? 1 : 0, id]);
+}
+
+export async function definirJustificatifTransaction(
+  id: number,
+  path: string | null
+): Promise<void> {
+  const db = await getDb();
+  await db.execute("UPDATE transactions SET justificatif_path = ? WHERE id = ?", [path, id]);
+}
+
 // ---------------------------------------------------------------------------
 // CHARGES FIXES
 // ---------------------------------------------------------------------------
@@ -354,14 +367,15 @@ export interface ObjectifInput {
   montant_actuel: number;
   date_cible: string | null;
   couleur: string;
+  compte_id: number | null;
 }
 
 export async function creerObjectif(o: ObjectifInput): Promise<number> {
   const db = await getDb();
   const res = await db.execute(
-    `INSERT INTO objectifs (nom, montant_cible, montant_actuel, date_cible, couleur, cree_le)
-     VALUES (?, ?, ?, ?, ?, ?)`,
-    [o.nom, o.montant_cible, o.montant_actuel, o.date_cible, o.couleur, new Date().toISOString()]
+    `INSERT INTO objectifs (nom, montant_cible, montant_actuel, date_cible, couleur, compte_id, cree_le)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [o.nom, o.montant_cible, o.montant_actuel, o.date_cible, o.couleur, o.compte_id, new Date().toISOString()]
   );
   return res.lastInsertId as number;
 }
@@ -370,9 +384,9 @@ export async function majObjectif(id: number, o: ObjectifInput): Promise<void> {
   const db = await getDb();
   await db.execute(
     `UPDATE objectifs
-       SET nom = ?, montant_cible = ?, montant_actuel = ?, date_cible = ?, couleur = ?
+       SET nom = ?, montant_cible = ?, montant_actuel = ?, date_cible = ?, couleur = ?, compte_id = ?
      WHERE id = ?`,
-    [o.nom, o.montant_cible, o.montant_actuel, o.date_cible, o.couleur, id]
+    [o.nom, o.montant_cible, o.montant_actuel, o.date_cible, o.couleur, o.compte_id, id]
   );
 }
 

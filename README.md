@@ -1,51 +1,71 @@
-# Budget Perso
+# Aplomb
 
-Application de bureau **100 % locale** de gestion de budget personnel.
-Aucune connexion en ligne, aucune synchronisation bancaire, aucun compte utilisateur.
+Application de **gestion de budget personnel** : une app de bureau Windows qui garde
+vos données chez vous, et une app compagnon iPhone pour consulter et saisir en déplacement.
 
-Tauri v2 + React + TypeScript + SQLite.
+- **Bureau** : Tauri v2 + React + TypeScript + SQLite.
+- **iPhone** : application web installable (PWA), publiée sur
+  <https://eric96-lang.github.io/aplomb/>.
 
-## Fonctionnalités (v1)
+Aucune connexion bancaire, aucun compte utilisateur, aucun serveur : la synchronisation
+avec l'iPhone passe par le OneDrive de l'utilisateur, **chiffrée de bout en bout**.
 
-- **Comptes** multiples (courant, épargne, autre) avec solde par compte et vue globale.
-- **Transactions** : revenu, dépense, **virement** entre comptes (jamais compté comme revenu/dépense).
-- Saisie de **dates passées** sans friction (ressaisie d'historique).
-- **Charges fixes** : échéances mensuelles générées automatiquement, statuts
-  (à venir / en retard / payée sans justificatif / payée avec justificatif),
-  règlement par transaction liée et **justificatif PDF copié en local**.
-- **Détection automatique** de charges récurrentes (algorithme simple, à valider/ignorer).
-- **Alertes système** : échéance imminente sans saisie, charge payée sans justificatif.
-- **Projections** de fin de mois par compte et globales.
-- **Tableau de bord** : totaux, reste à vivre, répartition par catégorie (Recharts).
-- **Export CSV** et accès direct au dossier de données pour la sauvegarde.
+## Fonctionnalités
+
+**Suivi** — comptes multiples et vue globale ; transactions (revenus, dépenses, virements
+entre comptes jamais comptés comme revenu ou dépense) ; pointage et rapprochement ;
+justificatifs joints ; import CSV / OFX avec dédoublonnage ; scan de reçus (OCR natif Windows).
+
+**Pilotage** — charges fixes et échéancier ; budgets par catégorie avec alertes ; objectifs
+d'épargne (dont suivi automatique d'un compte) ; prévisions avec revenu variable ;
+assistant « Plan du mois » ; analyse et points clés ; catégorisation qui apprend.
+
+**Documents** — factures, reçus et rapports PDF.
+
+**Sécurité** — code PIN et Windows Hello ; sauvegardes quotidiennes chiffrées
+(AES-256-GCM, clé dans le trousseau Windows) ; restauration de secours en un clic si la
+base est endommagée.
+
+**App iPhone** — soldes, budgets, plan du mois, objectifs et opérations ; saisie rapide
+avec photo du ticket ; verrouillage par code et Face ID (WebAuthn) ; fonctionne hors ligne.
+
+## Synchronisation iPhone
+
+Le PC reste la source de vérité. Le dossier `Aplomb Sync` du OneDrive contient :
+
+- `instantane.bpsync` — l'état publié par le PC, lu par le téléphone ;
+- `saisies/<uuid>.bpsync` — une saisie par fichier, déposée par le téléphone puis
+  intégrée par le PC (opération idempotente).
+
+Chaque fichier est chiffré en AES-256-GCM (WebCrypto, compressé en gzip) avec une clé
+partagée par QR code lors de l'appairage. Le protocole est commun aux deux applications
+(`src/sync/`).
 
 ## Prérequis
 
-- [Node.js](https://nodejs.org) 18+
-- [Rust](https://rustup.rs) (toolchain MSVC sous Windows) + **VS Build Tools** (workload « Desktop C++ »)
+- [Node.js](https://nodejs.org) 20+
+- [Rust](https://rustup.rs) (toolchain MSVC sous Windows) + **VS Build Tools**
+  (workload « Desktop C++ »)
 - WebView2 (préinstallé sur Windows 11)
 
 ## Développement
 
 ```bash
 npm install
-npm run icons     # génère les icônes de l'app (une seule fois)
-npm run app:dev   # lance l'app en mode développement (Tauri + Vite)
+npm run app:dev       # app de bureau (Tauri + Vite)
+npm run mobile:dev    # app iPhone (http://localhost:5174/aplomb/)
+npm test              # tests (Vitest)
 ```
 
-## Build de production
+## Publication
 
 ```bash
-npm run app:build
+npm run app:build         # installeur signé (variables TAURI_SIGNING_PRIVATE_KEY*)
+npm run release:prepare   # installeur au nom stable + latest.json pour la mise à jour auto
+npm run mobile:publier    # build de la PWA et publication sur GitHub Pages (gh-pages)
 ```
 
-Le binaire et l'installateur sont générés dans `src-tauri/target/release/`.
+## Où sont les données ?
 
-## Où sont mes données ?
-
-- Base SQLite : dossier de données de l'app (`AppData` sous Windows), fichier `budget.db`.
-- Justificatifs : `justificatifs/AAAA/MM-nom-charge.pdf` dans ce même dossier.
-- Exports CSV : sous-dossier `exports/`.
-
-Paramètres → « Ouvrir le dossier de données » pour le copier en sauvegarde.
-Évite de le placer dans un dossier synchronisé publiquement (OneDrive / Google Drive).
+Dans le dossier de données de l'app (`%APPDATA%\com.eric.budgetperso`) : base SQLite
+`budget.db`, justificatifs, exports CSV et sauvegardes chiffrées (`sauvegardes/`).

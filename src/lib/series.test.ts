@@ -9,7 +9,7 @@ const comptes: Compte[] = [
 let seq = 1;
 const tx = (p: Partial<Transaction> & { type: Transaction["type"]; montant: number; date: string }): Transaction => ({
   id: seq++, description: null, compte_id: 1, compte_dest_id: null, categorie_id: null,
-  created_at: "", a_confirmer: 0, auto_origine: null, ...p,
+  created_at: "", a_confirmer: 0, auto_origine: null, pointee: 0, justificatif_path: null, ...p,
 });
 
 describe("pointsSoldeJournalier (cumul en un passage)", () => {

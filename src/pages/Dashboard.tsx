@@ -1,15 +1,27 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { addMonths, format } from "date-fns";
 import { useAppData } from "../state/AppDataContext";
+import { Modal } from "../components/Modal";
+import {
+  chargerDashboardPrefs,
+  sauverDashboardPrefs,
+  reinitDashboardPrefs,
+  SECTIONS,
+  type DashboardPrefs,
+  type SectionId,
+} from "../lib/dashboardPrefs";
 import {
   moisDisponibles,
   repartitionDepenses,
   soldeCompteAvecInitial,
   soldeGlobal,
   totauxMois,
+  variationPct,
 } from "../lib/calculs";
 import { projeterFinDeMois } from "../lib/projection";
 import { statutsBudgets } from "../lib/budgets";
+import { planDuMois } from "../lib/planMois";
+import { lireProfil } from "../lib/profil";
 import { genererInsights } from "../lib/insights";
 import { InsightRow } from "../components/Insights";
 import { Icon } from "../components/Icon";
@@ -36,6 +48,8 @@ export function Dashboard() {
   const [mois, setMois] = useState(moisCourant());
   const [compteId, setCompteId] = useState<number | "global">("global");
   const [courbe, setCourbe] = useState<"mois" | "jour">("mois");
+  const [prefs, setPrefs] = useState<DashboardPrefs>(() => chargerDashboardPrefs());
+  const [perso, setPerso] = useState(false);
 
   const moisList = useMemo(() => {
     const l = moisDisponibles(transactions);
@@ -134,44 +148,72 @@ export function Dashboard() {
     };
   }, [echeances, mois]);
 
-  const delta = (cur: number, prev: number): number | null =>
-    prev === 0 ? null : ((cur - prev) / Math.abs(prev)) * 100;
+  const delta = variationPct;
 
   const tauxEpargne = totaux.revenus > 0 ? Math.max(0, totaux.solde / totaux.revenus) : 0;
 
-  return (
-    <>
-      <div className="page-head">
-        <div>
-          <h1>Tableau de bord</h1>
-          <div className="sub">{formatMois(mois)} · {compteSel === undefined ? "tous les comptes" : comptes.find((c) => c.id === compteSel)?.nom}</div>
+  // Assistant « Plan du mois » — seulement pertinent pour le mois en cours.
+  const estMoisCourant = mois === moisCourant();
+  const plan = useMemo(
+    () =>
+      planDuMois({ transactions, chargesFixes, budgets, categories, profil: lireProfil() }, mois),
+    [transactions, chargesFixes, budgets, categories, mois]
+  );
+
+  // --- Sections personnalisables du tableau de bord -----------------------
+  const blocs: Record<SectionId, ReactNode> = {
+    planmois: estMoisCourant ? (
+      <div className="card">
+        <div className="flex-between" style={{ marginBottom: 10 }}>
+          <h2 style={{ margin: 0 }}>
+            <span className="flex" style={{ gap: 8 }}>
+              <span style={{ color: "var(--accent)" }}><Icon name="calendar" size={18} /></span>
+              Plan de {formatMois(mois)}
+            </span>
+          </h2>
         </div>
-        <div className="flex" style={{ gap: 10 }}>
-          <select
-            className="select"
-            style={{ width: 170 }}
-            value={compteId}
-            onChange={(e) => setCompteId(e.target.value === "global" ? "global" : Number(e.target.value))}
-          >
-            <option value="global">Vue globale</option>
-            {comptes.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.nom}
-              </option>
-            ))}
-          </select>
-          <select className="select" style={{ width: 160 }} value={mois} onChange={(e) => setMois(e.target.value)}>
-            {moisList.map((m) => (
-              <option key={m} value={m}>
-                {formatMois(m)}
-              </option>
-            ))}
-          </select>
+        {plan.revenuAttendu > 0 ? (
+          <p className="muted" style={{ fontSize: 13, marginTop: 0 }}>
+            Revenu attendu <strong className="num">{formatMontant(plan.revenuAttendu)}</strong>
+            {" − "}charges fixes du mois <strong className="num">{formatMontant(plan.chargesMoisTotal)}</strong>
+            {" = "}
+            <strong className="num" style={{ color: plan.resteAvantVariable >= 0 ? "var(--pos)" : "var(--neg)" }}>
+              {formatMontant(plan.resteAvantVariable)}
+            </strong>{" "}avant dépenses variables.
+          </p>
+        ) : (
+          <p className="muted" style={{ fontSize: 13, marginTop: 0 }}>
+            Renseigne ton revenu dans <Link to="/parametres">Paramètres</Link> pour une prévision du mois.
+          </p>
+        )}
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {plan.aConfirmer > 0 && (
+            <PlanLigne to="/transactions" cls="amber"
+              texte={`${plan.aConfirmer} transaction${plan.aConfirmer > 1 ? "s" : ""} générée${plan.aConfirmer > 1 ? "s" : ""} à confirmer`} />
+          )}
+          {plan.echeancesSemaine > 0 && (
+            <PlanLigne to="/echeancier" cls="amber"
+              texte={`${plan.echeancesSemaine} charge${plan.echeancesSemaine > 1 ? "s" : ""} fixe${plan.echeancesSemaine > 1 ? "s" : ""} à régler cette semaine`} />
+          )}
+          {plan.budgetsAlerte > 0 && (
+            <PlanLigne to="/budgets" cls="red"
+              texte={`${plan.budgetsAlerte} budget${plan.budgetsAlerte > 1 ? "s" : ""} à surveiller`} />
+          )}
+          {plan.chargesRestantesCount > 0 && (
+            <PlanLigne to="/echeancier" cls="muted"
+              texte={`${plan.chargesRestantesCount} charge${plan.chargesRestantesCount > 1 ? "s" : ""} fixe${plan.chargesRestantesCount > 1 ? "s" : ""} encore à venir ce mois (${formatMontant(plan.chargesRestantesTotal)})`} />
+          )}
+          {plan.aConfirmer === 0 && plan.echeancesSemaine === 0 && plan.budgetsAlerte === 0 && plan.chargesRestantesCount === 0 && (
+            <div className="flex" style={{ gap: 8, fontSize: 13, color: "var(--pos)" }}>
+              <Icon name="check" size={16} /> Tout est à jour pour ce mois.
+            </div>
+          )}
         </div>
       </div>
+    ) : null,
 
-      {/* Stat tiles */}
-      <div className="grid grid-auto" style={{ marginBottom: 18 }}>
+    stats: (
+      <div className="grid grid-auto">
         <StatCard
           label={compteSel === undefined ? "Solde global" : "Solde du compte"}
           value={solde}
@@ -202,10 +244,11 @@ export function Dashboard() {
           delta={delta(totaux.solde, totauxPrec.solde)}
         />
       </div>
+    ),
 
-      {/* Points clés (Analyse) */}
-      {insights.length > 0 && (
-        <div className="card" style={{ marginBottom: 18 }}>
+    insights:
+      insights.length > 0 ? (
+        <div className="card">
           <div className="flex-between" style={{ marginBottom: 12 }}>
             <h2 style={{ margin: 0 }}>
               <span className="flex" style={{ gap: 8 }}>
@@ -223,10 +266,10 @@ export function Dashboard() {
             ))}
           </div>
         </div>
-      )}
+      ) : null,
 
-      {/* Courbe de solde + jauge */}
-      <div className="grid" style={{ gridTemplateColumns: "1fr 320px", marginBottom: 18 }}>
+    solde: (
+      <div className="grid" style={{ gridTemplateColumns: "1fr 320px" }}>
         <div className="card">
           <div className="flex-between" style={{ marginBottom: 12 }}>
             <h2 style={{ margin: 0 }}>Évolution du solde</h2>
@@ -256,15 +299,17 @@ export function Dashboard() {
           </div>
         </div>
       </div>
+    ),
 
-      {/* Flux mensuels */}
-      <div className="card" style={{ marginBottom: 18 }}>
+    flux: (
+      <div className="card">
         <h2>Revenus, dépenses & épargne — 6 derniers mois</h2>
         <FluxBarChart data={serieFlux} />
       </div>
+    ),
 
-      {/* Patrimoine total */}
-      <div className="card" style={{ marginBottom: 18 }}>
+    patrimoine: (
+      <div className="card">
         <div className="flex-between" style={{ marginBottom: 4 }}>
           <h2 style={{ margin: 0 }}>Patrimoine total</h2>
           <span className="num" style={{ fontWeight: 750, fontSize: 18 }}>
@@ -276,10 +321,11 @@ export function Dashboard() {
         </p>
         <SoldeAreaChart data={patrimoine} />
       </div>
+    ),
 
-      {/* Budgets */}
-      {budgetsStatut.length > 0 && (
-        <div className="card" style={{ marginBottom: 18 }}>
+    budgets:
+      budgetsStatut.length > 0 ? (
+        <div className="card">
           <h2>Budgets du mois</h2>
           <div className="grid grid-2" style={{ gap: 18 }}>
             {budgetsStatut.slice(0, 6).map((s) => {
@@ -304,10 +350,10 @@ export function Dashboard() {
             })}
           </div>
         </div>
-      )}
+      ) : null,
 
-      {/* Répartition */}
-      <div className="grid grid-2" style={{ marginBottom: 18, alignItems: "start" }}>
+    repartition: (
+      <div className="grid grid-2" style={{ alignItems: "start" }}>
         <div className="card">
           <h2>Répartition des dépenses</h2>
           {repartition.length === 0 ? (
@@ -327,8 +373,9 @@ export function Dashboard() {
           )}
         </div>
       </div>
+    ),
 
-      {/* Projection + heatmap + charges */}
+    projection: (
       <div className="grid grid-2" style={{ alignItems: "start" }}>
         <div className="card">
           <h2>Projection de fin de mois</h2>
@@ -385,7 +432,166 @@ export function Dashboard() {
           </div>
         </div>
       </div>
+    ),
+  };
+
+  const visibles = prefs.ordre.filter((id) => !prefs.masquees.includes(id) && blocs[id]);
+
+  return (
+    <>
+      <div className="page-head">
+        <div>
+          <h1>Tableau de bord</h1>
+          <div className="sub">{formatMois(mois)} · {compteSel === undefined ? "tous les comptes" : comptes.find((c) => c.id === compteSel)?.nom}</div>
+        </div>
+        <div className="flex" style={{ gap: 10 }}>
+          <select
+            className="select"
+            style={{ width: 170 }}
+            aria-label="Filtrer par compte"
+            value={compteId}
+            onChange={(e) => setCompteId(e.target.value === "global" ? "global" : Number(e.target.value))}
+          >
+            <option value="global">Vue globale</option>
+            {comptes.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.nom}
+              </option>
+            ))}
+          </select>
+          <select className="select" style={{ width: 160 }} aria-label="Choisir le mois" value={mois} onChange={(e) => setMois(e.target.value)}>
+            {moisList.map((m) => (
+              <option key={m} value={m}>
+                {formatMois(m)}
+              </option>
+            ))}
+          </select>
+          <button className="btn" onClick={() => setPerso(true)} title="Personnaliser le tableau de bord">
+            <Icon name="settings" size={16} /> Personnaliser
+          </button>
+        </div>
+      </div>
+
+      {visibles.map((id) => (
+        <div key={id} className="dash-section">
+          {blocs[id]}
+        </div>
+      ))}
+
+      {perso && (
+        <PersoDashboard
+          prefs={prefs}
+          onChange={(p) => {
+            setPrefs(p);
+            sauverDashboardPrefs(p);
+          }}
+          onClose={() => setPerso(false)}
+        />
+      )}
     </>
+  );
+}
+
+function PersoDashboard({
+  prefs,
+  onChange,
+  onClose,
+}: {
+  prefs: DashboardPrefs;
+  onChange: (p: DashboardPrefs) => void;
+  onClose: () => void;
+}) {
+  const meta = new Map(SECTIONS.map((s) => [s.id, s.label]));
+
+  function deplacer(index: number, sens: -1 | 1) {
+    const cible = index + sens;
+    if (cible < 0 || cible >= prefs.ordre.length) return;
+    const ordre = [...prefs.ordre];
+    [ordre[index], ordre[cible]] = [ordre[cible], ordre[index]];
+    onChange({ ...prefs, ordre });
+  }
+
+  function basculer(id: SectionId) {
+    const masquees = prefs.masquees.includes(id)
+      ? prefs.masquees.filter((m) => m !== id)
+      : [...prefs.masquees, id];
+    onChange({ ...prefs, masquees });
+  }
+
+  return (
+    <Modal
+      titre="Personnaliser le tableau de bord"
+      onClose={onClose}
+      footer={
+        <>
+          <button className="btn" style={{ marginRight: "auto" }} onClick={() => onChange(reinitDashboardPrefs())}>
+            Réinitialiser
+          </button>
+          <button className="btn primary" onClick={onClose}>Terminé</button>
+        </>
+      }
+    >
+      <p className="muted" style={{ fontSize: 13, marginTop: 0 }}>
+        Coche les sections à afficher et réordonne-les avec les flèches. Tes choix sont mémorisés sur cet appareil.
+      </p>
+      <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 8 }}>
+        {prefs.ordre.map((id, index) => {
+          const visible = !prefs.masquees.includes(id);
+          return (
+            <li
+              key={id}
+              className="flex"
+              style={{
+                gap: 10, alignItems: "center", padding: "10px 12px",
+                border: "1px solid var(--border)", borderRadius: 10, background: "var(--surface-2)",
+              }}
+            >
+              <label className="flex" style={{ gap: 10, alignItems: "center", flex: 1, cursor: "pointer" }}>
+                <input type="checkbox" checked={visible} onChange={() => basculer(id)} />
+                <span style={{ opacity: visible ? 1 : 0.5 }}>{meta.get(id)}</span>
+              </label>
+              <button
+                className="icon-btn"
+                aria-label="Monter"
+                disabled={index === 0}
+                onClick={() => deplacer(index, -1)}
+              >
+                <Icon name="chevron-up" size={16} />
+              </button>
+              <button
+                className="icon-btn"
+                aria-label="Descendre"
+                disabled={index === prefs.ordre.length - 1}
+                onClick={() => deplacer(index, 1)}
+              >
+                <Icon name="chevron-down" size={16} />
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </Modal>
+  );
+}
+
+function PlanLigne({ to, texte, cls }: { to: string; texte: string; cls: "amber" | "red" | "muted" }) {
+  const couleur = cls === "red" ? "var(--red)" : cls === "amber" ? "var(--amber)" : "var(--text-muted)";
+  return (
+    <Link
+      to={to}
+      className="flex-between"
+      style={{
+        gap: 10, alignItems: "center", padding: "9px 12px", borderRadius: 10,
+        border: "1px solid var(--border)", background: "var(--surface-2)",
+        textDecoration: "none", color: "var(--text)", fontSize: 13,
+      }}
+    >
+      <span className="flex" style={{ gap: 9, alignItems: "center" }}>
+        <span className="dot" style={{ background: couleur }} />
+        {texte}
+      </span>
+      <Icon name="chevron-down" size={15} style={{ transform: "rotate(-90deg)", opacity: 0.5 }} />
+    </Link>
   );
 }
 

@@ -5,7 +5,7 @@ import type { Budget, Categorie, Transaction, TxType } from "../db/types";
 let seq = 1;
 const tx = (montant: number, categorie_id: number, date = "2026-03-10", type: TxType = "depense"): Transaction => ({
   id: seq++, type, montant, date, description: null, compte_id: 1, compte_dest_id: null,
-  categorie_id, created_at: "", a_confirmer: 0, auto_origine: null,
+  categorie_id, created_at: "", a_confirmer: 0, auto_origine: null, pointee: 0, justificatif_path: null,
 });
 const cats: Categorie[] = [
   { id: 1, nom: "Alimentation", type: "depense", couleur: "#f00" },

@@ -29,9 +29,19 @@ export type IconName =
   | "lock"
   | "target"
   | "upload"
+  | "chevron-up"
+  | "chevron-down"
+  | "help"
+  | "camera"
+  | "search"
+  | "chevron-right"
+  | "chevron-left"
+  | "face-id"
   | "bulb";
 
 const PATHS: Record<IconName, ReactNode> = {
+  "chevron-up": <polyline points="6 15 12 9 18 15" />,
+  "chevron-down": <polyline points="6 9 12 15 18 9" />,
   dashboard: (
     <>
       <rect x="3" y="3" width="7" height="9" rx="1.5" />
@@ -220,6 +230,39 @@ const PATHS: Record<IconName, ReactNode> = {
       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
       <polyline points="17 8 12 3 7 8" />
       <line x1="12" y1="3" x2="12" y2="15" />
+    </>
+  ),
+  search: (
+    <>
+      <circle cx="11" cy="11" r="7" />
+      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+    </>
+  ),
+  camera: (
+    <>
+      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+      <circle cx="12" cy="13" r="4" />
+    </>
+  ),
+  "chevron-right": <polyline points="9 18 15 12 9 6" />,
+  "chevron-left": <polyline points="15 18 9 12 15 6" />,
+  "face-id": (
+    <>
+      <path d="M3 7V5a2 2 0 0 1 2-2h2" />
+      <path d="M17 3h2a2 2 0 0 1 2 2v2" />
+      <path d="M21 17v2a2 2 0 0 1-2 2h-2" />
+      <path d="M7 21H5a2 2 0 0 1-2-2v-2" />
+      <path d="M9 9v1.5" />
+      <path d="M15 9v1.5" />
+      <path d="M12 9v4h-1" />
+      <path d="M8.5 15.5c1.9 1.6 5.1 1.6 7 0" />
+    </>
+  ),
+  help: (
+    <>
+      <circle cx="12" cy="12" r="10" />
+      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+      <line x1="12" y1="17" x2="12.01" y2="17" />
     </>
   ),
   bulb: (

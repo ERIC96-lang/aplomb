@@ -63,7 +63,7 @@ describe("estDoublon", () => {
   const existantes: Transaction[] = [
     {
       id: 1, type: "depense", montant: 40, date: "2026-03-01", description: "Courses",
-      compte_id: 1, compte_dest_id: null, categorie_id: null, created_at: "", a_confirmer: 0, auto_origine: null,
+      compte_id: 1, compte_dest_id: null, categorie_id: null, created_at: "", a_confirmer: 0, auto_origine: null, pointee: 0, justificatif_path: null,
     },
   ];
   it("détecte un doublon identique (compte/date/montant/desc)", () => {

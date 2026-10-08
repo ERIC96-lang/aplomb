@@ -1,6 +1,6 @@
 [package]
 name = "budget-perso-app"
-version = "1.1.4"
+version = "1.1.22"
 description = "Application de bureau locale de gestion de budget personnel"
 authors = ["Eric"]
 edition = "2021"
@@ -32,4 +32,15 @@ base64 = "0.22"
 keyring = { version = "3", features = ["windows-native"] }
 
 [target.'cfg(windows)'.dependencies]
-windows = { version = "0.58", features = ["Security_Credentials_UI", "Foundation"] }
+windows = { version = "0.58", features = [
+  "Security_Credentials_UI",
+  "Foundation",
+  "Foundation_Collections",
+  "Globalization",
+  "Media_Ocr",
+  "Graphics_Imaging",
+  "Storage",
+  "Storage_Streams",
+  "Win32_Foundation",
+  "Win32_System_WinRT",
+] }

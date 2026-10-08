@@ -1,0 +1,1043 @@
+/* ============================================================
+   Aplomb — app compagnon iPhone
+   S'appuie sur les jetons du design system PC (src/styles.css).
+   ============================================================ */
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+body {
+  font-size: 15px;
+  overscroll-behavior-y: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+}
+input,
+textarea {
+  -webkit-user-select: text;
+  user-select: text;
+}
+#root {
+  height: auto;
+  min-height: 100%;
+}
+button {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ---------- Structure ---------- */
+.m-app {
+  min-height: 100dvh;
+  padding-bottom: calc(env(safe-area-inset-bottom) + 92px);
+}
+.m-entete {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  padding: calc(env(safe-area-inset-top) + 14px) 20px 12px;
+  background: color-mix(in srgb, var(--bg) 84%, transparent);
+  -webkit-backdrop-filter: saturate(1.6) blur(18px);
+  backdrop-filter: saturate(1.6) blur(18px);
+}
+.m-entete-ligne {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+.m-surtitre {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+.m-surtitre::first-letter {
+  text-transform: uppercase;
+}
+.m-titre {
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 760;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+  margin: 2px 0 0;
+}
+.m-page {
+  padding: 4px 16px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ---------- Cartes ---------- */
+.m-carte {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  box-shadow: var(--shadow);
+  padding: 18px;
+}
+.m-carte-titre {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 0 12px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.m-hero {
+  padding: 22px 20px 20px;
+}
+.m-hero-lib {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.m-hero-montant {
+  font-family: var(--font-display);
+  font-size: 38px;
+  font-weight: 760;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  margin-top: 4px;
+  line-height: 1.15;
+}
+.m-hero-sous {
+  font-size: 13px;
+  color: var(--text-dim);
+  margin-top: 4px;
+}
+.m-trio {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.m-trio .lib {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+.m-trio .val {
+  margin-top: 3px;
+  font-size: 15.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pos {
+  color: var(--green);
+}
+.neg {
+  color: var(--red);
+}
+.attn {
+  color: var(--amber);
+}
+
+/* ---------- Listes ---------- */
+.m-ligne {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+}
+.m-ligne:first-child {
+  border-top: 0;
+  padding-top: 2px;
+}
+.m-ligne:last-child {
+  padding-bottom: 2px;
+}
+.m-ligne .corps {
+  flex: 1;
+  min-width: 0;
+}
+.m-ligne .nom {
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.m-ligne .sous {
+  margin-top: 1px;
+  font-size: 12.5px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.m-ligne .montant {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  text-align: right;
+}
+.m-ligne .montant .sous {
+  text-align: right;
+  font-weight: 500;
+}
+.m-pastille {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  font-size: 14px;
+  font-weight: 700;
+  background: var(--surface-2);
+  color: var(--text);
+}
+.m-jour {
+  margin: 12px 6px 6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.m-jour:first-child {
+  margin-top: 2px;
+}
+.m-liste-carte {
+  padding: 6px 16px;
+}
+.m-liste-carte .m-ligne:first-child {
+  padding-top: 12px;
+}
+.m-liste-carte .m-ligne:last-child {
+  padding-bottom: 12px;
+}
+button.m-ligne {
+  width: 100%;
+  background: none;
+  border-left: 0;
+  border-right: 0;
+  border-bottom: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+}
+
+.m-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  vertical-align: 1px;
+  background: color-mix(in srgb, var(--amber) 16%, transparent);
+  color: var(--amber);
+}
+.m-badge.envoye {
+  background: var(--surface-2);
+  color: var(--text-muted);
+}
+
+/* ---------- Barres de progression ---------- */
+.m-barre {
+  height: 7px;
+  border-radius: 4px;
+  background: var(--surface-3);
+  overflow: hidden;
+  margin-top: 9px;
+}
+.m-barre > span {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  background: var(--text);
+}
+.m-barre.attention > span {
+  background: var(--amber);
+}
+.m-barre.depasse > span {
+  background: var(--red);
+}
+.m-barre.ok > span {
+  background: var(--green);
+}
+
+/* ---------- Puce d'état de synchro ---------- */
+.m-etat {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
+  padding: 7px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.m-etat .point {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+}
+.m-etat.attente .point {
+  background: var(--amber);
+}
+.m-etat.erreur .point {
+  background: var(--red);
+}
+.m-tourne {
+  animation: m-tourne 0.9s linear infinite;
+}
+@keyframes m-tourne {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------- Barre d'onglets ---------- */
+.m-onglets {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  align-items: end;
+  padding: 6px 6px calc(env(safe-area-inset-bottom) + 6px);
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  -webkit-backdrop-filter: saturate(1.6) blur(20px);
+  backdrop-filter: saturate(1.6) blur(20px);
+  border-top: 1px solid var(--border);
+}
+.m-onglet {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 0 2px;
+  border: 0;
+  background: none;
+  color: var(--text-dim);
+  font: inherit;
+  font-size: 10.5px;
+  font-weight: 600;
+}
+.m-onglet.actif {
+  color: var(--text);
+}
+.m-fab {
+  justify-self: center;
+  width: 56px;
+  height: 56px;
+  border: 0;
+  border-radius: 19px;
+  display: grid;
+  place-items: center;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
+  transform: translateY(-16px);
+  transition: transform 0.15s ease;
+}
+.m-fab:active {
+  transform: translateY(-16px) scale(0.94);
+}
+
+/* ---------- Feuille (saisie, détails) ---------- */
+.m-voile {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(10, 10, 12, 0.4);
+  animation: m-fondu 0.2s ease;
+}
+.m-feuille {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 41;
+  max-height: 94dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 8px 18px calc(env(safe-area-inset-bottom) + 18px);
+  border-radius: 26px 26px 0 0;
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+  animation: m-monte 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.m-poignee {
+  width: 38px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--surface-3);
+  margin: 2px auto 0;
+  flex-shrink: 0;
+}
+.m-feuille-tete {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.m-feuille-tete h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 19px;
+  letter-spacing: -0.015em;
+}
+.m-fermer {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--surface-2);
+  color: var(--text-muted);
+}
+@keyframes m-fondu {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes m-monte {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+/* ---------- Formulaire de saisie ---------- */
+.m-montant {
+  text-align: center;
+}
+.m-montant input {
+  width: 100%;
+  border: 0;
+  outline: none;
+  background: transparent;
+  text-align: center;
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: 50px;
+  font-weight: 760;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  padding: 0;
+}
+.m-montant input::placeholder {
+  color: var(--surface-3);
+}
+.m-montant .devise {
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+}
+.m-seg {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 14px;
+  background: var(--surface-2);
+}
+.m-seg button {
+  border: 0;
+  border-radius: 11px;
+  padding: 10px;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 650;
+}
+.m-seg button.actif {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+}
+.m-champ {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.m-champ > label,
+.m-champ > .lib {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.m-champs-duo {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr;
+  gap: 10px;
+}
+.m-input {
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 16px; /* ≥ 16 px : pas de zoom automatique d'iOS */
+  -webkit-appearance: none;
+  appearance: none;
+}
+.m-input:focus {
+  outline: none;
+  border-color: var(--border-strong);
+  background: var(--surface);
+}
+select.m-input {
+  background-image: linear-gradient(45deg, transparent 50%, var(--text-dim) 50%),
+    linear-gradient(135deg, var(--text-dim) 50%, transparent 50%);
+  background-position: calc(100% - 19px) 21px, calc(100% - 14px) 21px;
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 34px;
+}
+textarea.m-input {
+  min-height: 92px;
+  resize: none;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 14px;
+}
+.m-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.m-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 13px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 550;
+}
+.m-chip .pt {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.m-chip.actif {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-contrast);
+}
+.m-chip.actif .pt {
+  box-shadow: 0 0 0 2px var(--accent-contrast);
+}
+.m-photo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.m-photo img {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+}
+
+/* ---------- Boutons ---------- */
+.m-bouton {
+  width: 100%;
+  min-height: 52px;
+  border: 0;
+  border-radius: 16px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  transition: transform 0.12s ease, opacity 0.12s ease;
+}
+.m-bouton:active {
+  transform: scale(0.98);
+}
+.m-bouton:disabled {
+  opacity: 0.4;
+}
+.m-bouton.secondaire {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.m-bouton.discret {
+  background: transparent;
+  color: var(--text-muted);
+  min-height: 44px;
+  font-weight: 600;
+}
+.m-bouton.danger {
+  background: color-mix(in srgb, var(--red) 12%, transparent);
+  color: var(--red);
+}
+
+/* ---------- Réglages (listes groupées façon iOS) ---------- */
+.m-groupe-titre {
+  margin: 10px 6px -6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.m-groupe {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--surface);
+}
+.m-reglage {
+  width: 100%;
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 0;
+  border-top: 1px solid var(--border);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+}
+.m-reglage:first-child {
+  border-top: 0;
+}
+.m-reglage .corps {
+  flex: 1;
+  min-width: 0;
+}
+.m-reglage .titre {
+  font-size: 15px;
+  font-weight: 600;
+}
+.m-reglage .sous {
+  margin-top: 1px;
+  font-size: 12.5px;
+  color: var(--text-dim);
+  overflow-wrap: anywhere;
+}
+.m-reglage .valeur {
+  font-size: 14px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.m-reglage .ico {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  background: var(--surface-2);
+  color: var(--text);
+}
+.m-reglage.danger,
+.m-reglage.danger .titre {
+  color: var(--red);
+}
+.m-reglage:disabled {
+  opacity: 0.45;
+}
+.m-note {
+  margin: 0 6px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--text-dim);
+}
+.m-empreinte {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+/* ---------- Accueil / appairage ---------- */
+.m-accueil {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding: calc(env(safe-area-inset-top) + 44px) 24px calc(env(safe-area-inset-bottom) + 24px);
+}
+.m-logo {
+  width: 72px;
+  height: 72px;
+  border-radius: 20px;
+  display: grid;
+  place-items: center;
+  background: #18181b;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+}
+.m-accueil h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 770;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+.m-accueil .intro {
+  margin: 8px 0 0;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+.m-etapes {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.m-etape {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+.m-etape .num {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-size: 13px;
+  font-weight: 700;
+}
+.m-etape .txt {
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+.m-etape .txt strong {
+  color: var(--text);
+}
+.m-encart {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--amber) 13%, transparent);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.m-encart.neutre {
+  background: var(--surface-2);
+}
+.m-pousse {
+  flex: 1;
+}
+.m-verif {
+  text-align: center;
+  padding: 26px 18px;
+}
+.m-verif .m-empreinte {
+  display: inline-block;
+  margin: 12px 0 4px;
+  padding: 10px 18px;
+  border-radius: 14px;
+  background: var(--surface-2);
+  font-size: 24px;
+}
+
+/* ---------- Scanner de QR code ---------- */
+.m-scanner {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: #000;
+  color: #fff;
+}
+.m-scanner video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.m-viseur {
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  width: 250px;
+  height: 250px;
+  transform: translate(-50%, -50%);
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  border-radius: 30px;
+  box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.5);
+}
+.m-scanner-haut {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: flex-end;
+  padding: calc(env(safe-area-inset-top) + 12px) 16px 0;
+}
+.m-scanner-haut .m-fermer {
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+}
+.m-scanner-bas {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px 22px calc(env(safe-area-inset-bottom) + 22px);
+  text-align: center;
+  font-size: 15px;
+  line-height: 1.45;
+}
+.m-scanner-bas .m-bouton.secondaire {
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+}
+
+/* ---------- États vides ---------- */
+.m-vide {
+  padding: 30px 20px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 14.5px;
+  line-height: 1.5;
+}
+.m-vide .ico {
+  width: 52px;
+  height: 52px;
+  margin: 0 auto 12px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  background: var(--surface-2);
+  color: var(--text);
+}
+.m-vide strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--text);
+  font-size: 16px;
+}
+
+/* ---------- Recherche ---------- */
+.m-recherche {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  border-radius: 14px;
+  background: var(--surface-2);
+  color: var(--text-dim);
+}
+.m-recherche input {
+  flex: 1;
+  min-height: 44px;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 16px;
+}
+
+/* Toast (composant partagé avec le PC), placé au-dessus des onglets. */
+.toast {
+  left: 16px;
+  right: 16px;
+  bottom: calc(env(safe-area-inset-bottom) + 96px);
+  transform: none;
+  border-radius: 16px;
+  text-align: center;
+  font-size: 14.5px;
+  padding: 14px 18px;
+}
+
+/* Pas de filet entre le titre d'une carte et sa première ligne. */
+.m-carte-titre + .m-ligne {
+  border-top: 0;
+  padding-top: 2px;
+}
+
+/* ---------- Verrouillage ---------- */
+.m-verrou {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: calc(env(safe-area-inset-top) + 56px) 24px calc(env(safe-area-inset-bottom) + 16px);
+  background: var(--bg);
+  overflow-y: auto;
+}
+.m-verrou h2 {
+  margin: 14px 0 0;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+}
+.m-verrou-sous {
+  margin: 0 0 18px;
+  min-height: 21px;
+  font-size: 14.5px;
+  color: var(--text-muted);
+  text-align: center;
+}
+.m-verrou .m-bouton.discret {
+  width: auto;
+  margin-top: auto;
+}
+.m-clavier-bloc {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 30px;
+}
+.m-feuille .m-clavier-bloc {
+  gap: 22px;
+  padding-bottom: 4px;
+}
+.m-feuille .m-clavier-bloc .m-bouton {
+  width: 100%;
+}
+.m-points {
+  display: flex;
+  gap: 18px;
+}
+.m-points span {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  border: 1.5px solid var(--text-muted);
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+.m-points span.plein {
+  background: var(--text);
+  border-color: var(--text);
+}
+.m-secoue {
+  animation: m-secoue 0.42s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+@keyframes m-secoue {
+  10%, 90% { transform: translateX(-2px); }
+  20%, 80% { transform: translateX(4px); }
+  30%, 50%, 70% { transform: translateX(-8px); }
+  40%, 60% { transform: translateX(8px); }
+}
+.m-clavier {
+  display: grid;
+  grid-template-columns: repeat(3, 76px);
+  gap: 16px 24px;
+}
+.m-touche {
+  width: 76px;
+  height: 76px;
+  border: 0;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 500;
+  transition: background 0.1s ease;
+}
+.m-touche:active {
+  background: var(--surface-3);
+}
+.m-touche.vide {
+  background: transparent;
+}
+.m-touche.vide:active {
+  background: var(--surface-2);
+}
+.m-touche:disabled {
+  opacity: 0.35;
+}
+span.m-touche.vide {
+  pointer-events: none;
+}
+
+/* Interrupteur façon iOS (affichage seul, la ligne entière est cliquable). */
+.m-interrupteur {
+  position: relative;
+  width: 50px;
+  height: 30px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: var(--surface-3);
+  transition: background 0.18s ease;
+}
+.m-interrupteur::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.22);
+  transition: transform 0.18s ease;
+}
+.m-interrupteur.on {
+  background: var(--green);
+}
+.m-interrupteur.on::after {
+  transform: translateX(20px);
+}
+.m-select-discret {
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 15px;
+  text-align: right;
+  direction: rtl;
+  -webkit-appearance: none;
+  appearance: none;
+}

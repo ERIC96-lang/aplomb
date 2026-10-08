@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
-import { addMonths, differenceInCalendarMonths, format } from "date-fns";
-import { fr } from "date-fns/locale";
+import { differenceInCalendarMonths } from "date-fns";
 import { useAppData } from "../state/AppDataContext";
 import { useToast } from "../state/ToastContext";
 import { Modal } from "../components/Modal";
@@ -13,13 +12,14 @@ import {
   type ObjectifInput,
 } from "../db/repo";
 import { pointsFluxMensuel } from "../lib/series";
+import { montantActuelObjectif, objectifLieCompte, projectionAtteinte } from "../lib/objectifs";
 import { formatMontant, formatDate } from "../lib/format";
-import type { Objectif } from "../db/types";
+import type { Compte, Objectif } from "../db/types";
 
 const COULEURS = ["#6d6bf5", "#2dd4bf", "#34d399", "#f59e0b", "#ec4899", "#60a5fa", "#a78bfa"];
 
 export function Objectifs() {
-  const { objectifs, transactions, rafraichir } = useAppData();
+  const { objectifs, comptes, transactions, rafraichir } = useAppData();
   const toast = useToast();
   const [edit, setEdit] = useState<Objectif | "new" | null>(null);
 
@@ -27,7 +27,7 @@ export function Objectifs() {
   const epargneMoyenne = useMemo(() => {
     const flux = pointsFluxMensuel(transactions, undefined, 3);
     const m = flux.reduce((a, f) => a + f.epargne, 0) / (flux.length || 1);
-    return m;
+    return Number.isFinite(m) ? m : 0;
   }, [transactions]);
 
   return (
@@ -59,6 +59,9 @@ export function Objectifs() {
             <ObjectifCard
               key={o.id}
               o={o}
+              comptes={comptes}
+              montantActuel={montantActuelObjectif(o, comptes, transactions)}
+              lieCompte={objectifLieCompte(o, comptes)}
               epargneMoyenne={epargneMoyenne}
               onEdit={() => setEdit(o)}
               onChange={rafraichir}
@@ -71,6 +74,7 @@ export function Objectifs() {
       {edit && (
         <ObjectifForm
           objectif={edit === "new" ? null : edit}
+          comptes={comptes}
           onClose={() => setEdit(null)}
           onSaved={async () => {
             setEdit(null);
@@ -91,35 +95,41 @@ export function Objectifs() {
 
 function ObjectifCard({
   o,
+  comptes,
+  montantActuel,
+  lieCompte,
   epargneMoyenne,
   onEdit,
   onChange,
   toast,
 }: {
   o: Objectif;
+  comptes: Compte[];
+  montantActuel: number;
+  lieCompte: boolean;
   epargneMoyenne: number;
   onEdit: () => void;
   onChange: () => Promise<void>;
   toast: (m: string) => void;
 }) {
   const [ajout, setAjout] = useState("");
-  const ratio = o.montant_cible > 0 ? Math.min(1, o.montant_actuel / o.montant_cible) : 0;
-  const atteint = o.montant_actuel >= o.montant_cible;
-  const reste = Math.max(0, o.montant_cible - o.montant_actuel);
+  const compteNom = lieCompte ? comptes.find((c) => c.id === o.compte_id)?.nom ?? null : null;
+  const ratio = o.montant_cible > 0 ? Math.min(1, montantActuel / o.montant_cible) : 0;
+  const atteint = montantActuel >= o.montant_cible;
+  const reste = Math.max(0, o.montant_cible - montantActuel);
 
-  // Projection : date d'atteinte estimée au rythme d'épargne moyen.
-  const projection = useMemo(() => {
-    if (atteint) return "Objectif atteint 🎉";
-    if (epargneMoyenne <= 0) return "Rythme d'épargne insuffisant pour estimer";
-    const mois = Math.ceil(reste / epargneMoyenne);
-    const date = addMonths(new Date(), mois);
-    return `Atteint vers ${format(date, "MMMM yyyy", { locale: fr })} (~${mois} mois)`;
-  }, [atteint, epargneMoyenne, reste]);
+  // Projection : date d'atteinte estimée au rythme d'épargne moyen (robuste).
+  const projection = useMemo(
+    () => projectionAtteinte(reste, epargneMoyenne, atteint),
+    [atteint, epargneMoyenne, reste]
+  );
 
   // Si une date cible est fixée : effort mensuel requis.
   const effortRequis = useMemo(() => {
     if (!o.date_cible || atteint) return null;
-    const mois = Math.max(1, differenceInCalendarMonths(new Date(o.date_cible), new Date()));
+    const diff = differenceInCalendarMonths(new Date(o.date_cible), new Date());
+    if (!Number.isFinite(diff)) return null; // date cible invalide → pas d'effort affiché
+    const mois = Math.max(1, diff);
     return reste / mois;
   }, [o.date_cible, atteint, reste]);
 
@@ -139,7 +149,7 @@ function ObjectifCard({
       </div>
 
       <div className="num" style={{ fontSize: 24, fontWeight: 750, margin: "10px 0 2px", color: o.couleur }}>
-        {formatMontant(o.montant_actuel)}
+        {formatMontant(montantActuel)}
         <span className="muted" style={{ fontSize: 15, fontWeight: 500 }}> / {formatMontant(o.montant_cible)}</span>
       </div>
       <div className="progress" style={{ height: 10, marginTop: 8 }}>
@@ -149,6 +159,16 @@ function ObjectifCard({
         <span className="dim">{Math.round(ratio * 100)} %</span>
         <span className="dim">{atteint ? "Terminé" : `Reste ${formatMontant(reste)}`}</span>
       </div>
+
+      {compteNom && (
+        <div
+          className="chip"
+          style={{ background: "var(--brand-grad-soft)", marginTop: 12, fontSize: 12 }}
+          title="La progression suit automatiquement le solde de ce compte"
+        >
+          <Icon name="repeat" size={13} /> Suivi auto · {compteNom}
+        </div>
+      )}
 
       <div className="muted" style={{ fontSize: 12.5, marginTop: 12 }}>
         {projection}
@@ -160,7 +180,7 @@ function ObjectifCard({
         </div>
       )}
 
-      {!atteint && (
+      {!atteint && !lieCompte && (
         <div className="flex" style={{ gap: 6, marginTop: 14, flexWrap: "wrap" }}>
           <button className="btn sm" onClick={() => contribuer(50)}>+ 50</button>
           <button className="btn sm" onClick={() => contribuer(100)}>+ 100</button>
@@ -202,11 +222,13 @@ function ObjectifCard({
 
 function ObjectifForm({
   objectif,
+  comptes,
   onClose,
   onSaved,
   onDelete,
 }: {
   objectif: Objectif | null;
+  comptes: Compte[];
   onClose: () => void;
   onSaved: () => void;
   onDelete: (id: number) => void;
@@ -216,6 +238,7 @@ function ObjectifForm({
   const [actuel, setActuel] = useState(objectif ? String(objectif.montant_actuel) : "0");
   const [dateCible, setDateCible] = useState(objectif?.date_cible ?? "");
   const [couleur, setCouleur] = useState(objectif?.couleur ?? COULEURS[0]);
+  const [compteId, setCompteId] = useState<number | "">(objectif?.compte_id ?? "");
 
   const valide = nom.trim() && parseFloat(cible.replace(",", ".")) > 0;
 
@@ -224,9 +247,11 @@ function ObjectifForm({
     const input: ObjectifInput = {
       nom: nom.trim(),
       montant_cible: parseFloat(cible.replace(",", ".")),
-      montant_actuel: parseFloat(actuel.replace(",", ".")) || 0,
+      // Lié à un compte : le montant actuel est calculé sur le solde, on stocke 0.
+      montant_actuel: compteId === "" ? parseFloat(actuel.replace(",", ".")) || 0 : 0,
       date_cible: dateCible || null,
       couleur,
+      compte_id: compteId === "" ? null : Number(compteId),
     };
     if (objectif) await majObjectif(objectif.id, input);
     else await creerObjectif(input);
@@ -258,11 +283,35 @@ function ObjectifForm({
           <label>Montant cible (€)</label>
           <input className="input" inputMode="decimal" value={cible} onChange={(e) => setCible(e.target.value)} placeholder="3000" />
         </div>
-        <div className="field">
-          <label>Déjà épargné (€)</label>
-          <input className="input" inputMode="decimal" value={actuel} onChange={(e) => setActuel(e.target.value)} />
-        </div>
+        {compteId === "" && (
+          <div className="field">
+            <label>Déjà épargné (€)</label>
+            <input className="input" inputMode="decimal" value={actuel} onChange={(e) => setActuel(e.target.value)} />
+          </div>
+        )}
       </div>
+      {comptes.length > 0 && (
+        <div className="field">
+          <label>Suivi automatique (optionnel)</label>
+          <select
+            className="select"
+            value={compteId}
+            onChange={(e) => setCompteId(e.target.value === "" ? "" : Number(e.target.value))}
+          >
+            <option value="">Suivi manuel (je saisis mes versements)</option>
+            {comptes.map((c) => (
+              <option key={c.id} value={c.id}>
+                Suivre le solde de « {c.nom} »
+              </option>
+            ))}
+          </select>
+          {compteId !== "" && (
+            <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>
+              La progression suivra automatiquement le solde de ce compte — aucun versement à saisir à la main.
+            </div>
+          )}
+        </div>
+      )}
       <div className="field">
         <label>Date cible (optionnel)</label>
         <input className="input" type="date" value={dateCible} onChange={(e) => setDateCible(e.target.value)} />

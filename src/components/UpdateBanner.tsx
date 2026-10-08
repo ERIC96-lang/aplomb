@@ -65,7 +65,7 @@ export function UpdateBanner() {
             ? "Installé, redémarrage…"
             : update.body
             ? update.body.slice(0, 140)
-            : "Une nouvelle version de Budget Perso est prête à être installée."}
+            : "Une nouvelle version d'Aplomb est prête à être installée."}
         </div>
       </div>
       {etat === "idle" && (

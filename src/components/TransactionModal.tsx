@@ -1,16 +1,21 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Modal } from "./Modal";
 import { useAppData } from "../state/AppDataContext";
 import {
+  creerRegle,
   creerTransaction,
+  definirJustificatifTransaction,
+  listRegles,
   majTransaction,
   supprimerTransaction,
   type TransactionInput,
 } from "../db/repo";
 import { aujourdhui } from "../lib/format";
+import { categoriePourDescription, motCleDepuisDescription } from "../lib/categorisation";
 import { genererRecuTransaction } from "../lib/pdf";
+import { choisirEtCopierJustificatif, ouvrirJustificatif } from "../lib/justificatifs";
 import { Icon } from "./Icon";
-import type { Transaction, TxType } from "../db/types";
+import type { RegleCategorisation, Transaction, TxType } from "../db/types";
 
 interface Props {
   transaction?: Transaction | null; // édition
@@ -55,6 +60,55 @@ export function TransactionModal({
     transaction?.categorie_id ?? presets?.categorie_id ?? ""
   );
   const [busy, setBusy] = useState(false);
+  const [justif, setJustif] = useState<string | null>(transaction?.justificatif_path ?? null);
+
+  // F1 — catégorisation apprenante : règles existantes + option « mémoriser ».
+  const [regles, setRegles] = useState<RegleCategorisation[]>([]);
+  const [memoriser, setMemoriser] = useState(true);
+  const [motCleManuel, setMotCleManuel] = useState<string | null>(null);
+  useEffect(() => {
+    listRegles().then(setRegles).catch(() => {});
+  }, []);
+
+  const dejaCouvert = useMemo(
+    () => categoriePourDescription(regles, description) != null,
+    [regles, description]
+  );
+  const motCleSuggere = motCleManuel ?? motCleDepuisDescription(description);
+  // Proposer la mémorisation seulement pour une dépense/revenu catégorisé à la
+  // main dont le libellé n'est pas déjà pris en charge par une règle.
+  const proposerRegle =
+    type !== "virement" &&
+    categorieId !== "" &&
+    description.trim().length > 0 &&
+    !dejaCouvert &&
+    motCleSuggere.length >= 3;
+
+  /** À la saisie du libellé, pré-remplit la catégorie via les règles apprises. */
+  function onDescriptionChange(valeur: string) {
+    setDescription(valeur);
+    setMotCleManuel(null);
+    if (type !== "virement" && categorieId === "") {
+      const cat = categoriePourDescription(regles, valeur);
+      if (cat != null) setCategorieId(cat);
+    }
+  }
+
+  async function joindreJustificatif() {
+    if (!transaction) return;
+    const path = await choisirEtCopierJustificatif(
+      description.trim() || `transaction-${transaction.id}`,
+      date.slice(0, 7)
+    );
+    if (!path) return;
+    await definirJustificatifTransaction(transaction.id, path);
+    setJustif(path);
+  }
+  async function retirerJustificatif() {
+    if (!transaction) return;
+    await definirJustificatifTransaction(transaction.id, null);
+    setJustif(null);
+  }
 
   const categoriesFiltrees = useMemo(
     () =>
@@ -91,6 +145,14 @@ export function TransactionModal({
       categorie_id:
         type === "virement" ? null : categorieId === "" ? null : Number(categorieId),
     };
+    // F1 — mémorise une règle de catégorisation à partir de ce classement manuel.
+    if (proposerRegle && memoriser && input.categorie_id != null) {
+      const motcle = motCleSuggere.trim().toLowerCase();
+      if (motcle.length >= 3 && !regles.some((r) => r.motcle === motcle)) {
+        await creerRegle(motcle, input.categorie_id).catch(() => {});
+      }
+    }
+
     let id: number;
     if (transaction) {
       await majTransaction(transaction.id, input);
@@ -260,10 +322,51 @@ export function TransactionModal({
         <input
           className="input"
           value={description}
-          onChange={(e) => setDescription(e.target.value)}
+          onChange={(e) => onDescriptionChange(e.target.value)}
           placeholder="ex. Courses Carrefour"
         />
       </div>
+
+      {proposerRegle && (
+        <label
+          className="flex"
+          style={{ gap: 9, alignItems: "center", marginTop: -4, fontSize: 13, cursor: "pointer" }}
+        >
+          <input type="checkbox" checked={memoriser} onChange={(e) => setMemoriser(e.target.checked)} />
+          <span className="muted">Classer automatiquement les prochaines transactions contenant</span>
+          <input
+            className="input"
+            style={{ width: 150, padding: "5px 8px" }}
+            value={motCleSuggere}
+            onChange={(e) => setMotCleManuel(e.target.value)}
+            onClick={(e) => e.stopPropagation()}
+            disabled={!memoriser}
+          />
+        </label>
+      )}
+
+      {transaction && (
+        <div className="field">
+          <label>Justificatif (PDF)</label>
+          {justif ? (
+            <div className="flex" style={{ gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+              <span className="chip" style={{ background: "var(--brand-grad-soft)" }}>
+                <Icon name="paperclip" size={13} /> Justificatif joint
+              </span>
+              <button className="btn" type="button" onClick={() => ouvrirJustificatif(justif)}>
+                Voir
+              </button>
+              <button className="btn danger" type="button" onClick={retirerJustificatif}>
+                Retirer
+              </button>
+            </div>
+          ) : (
+            <button className="btn" type="button" onClick={joindreJustificatif}>
+              <Icon name="paperclip" size={15} /> Joindre un PDF
+            </button>
+          )}
+        </div>
+      )}
 
       {erreur && (
         <div style={{ color: "var(--red)", fontSize: 13, fontWeight: 600 }}>{erreur}</div>

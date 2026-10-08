@@ -13,7 +13,7 @@ export function LockScreen() {
   const [busy, setBusy] = useState(false);
 
   const tenterHello = useCallback(async () => {
-    const ok = await helloVerifier("Déverrouiller Budget Perso");
+    const ok = await helloVerifier("Déverrouiller Aplomb");
     if (ok) deverrouillerDirect();
     return ok;
   }, [deverrouillerDirect]);
@@ -73,7 +73,7 @@ export function LockScreen() {
         <div className="lock-logo">
           <Icon name="wallet" size={26} />
         </div>
-        <h2 style={{ margin: "0 0 4px" }}>Budget Perso</h2>
+        <h2 style={{ margin: "0 0 4px" }}>Aplomb</h2>
         <p className="muted" style={{ margin: 0, fontSize: 13 }}>
           {erreur ? "Code incorrect, réessaie" : "Saisis ton code PIN"}
         </p>
