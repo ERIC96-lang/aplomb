@@ -3,6 +3,7 @@ import { addMonths, format } from "date-fns";
 import { useAppData } from "../state/AppDataContext";
 import { useToast } from "../state/ToastContext";
 import { Icon } from "../components/Icon";
+import { Defilant } from "../components/Defilant";
 import { definirBudget, supprimerBudget } from "../db/repo";
 import { statutsBudgets, type BudgetEtat } from "../lib/budgets";
 import { moisDisponibles } from "../lib/calculs";
@@ -119,7 +120,7 @@ export function Budgets() {
           </div>
           <div className="flex-between" style={{ marginBottom: 6 }}>
             <span className="num" style={{ fontWeight: 700, fontSize: 18 }}>
-              {formatMontant(totalDepense)}{" "}
+              <Defilant valeur={totalDepense} />{" "}
               <span className="muted" style={{ fontSize: 14, fontWeight: 400 }}>
                 / {formatMontant(totalPlafond)}
               </span>

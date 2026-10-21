@@ -1060,3 +1060,107 @@ span.m-touche.vide {
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
 }
+
+/* ---------- Animations « fil à plomb » ----------
+   Même langage que l'app PC : chaque bloc descend de quelques pixels et se
+   pose avec un léger dépassement, en cascade. Joué à l'affichage seulement. */
+@keyframes m-poser {
+  0% {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  55% {
+    opacity: 1;
+    transform: translateY(2px);
+  }
+  80% {
+    transform: translateY(-0.5px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes m-apparaitre {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes m-remplir {
+  from {
+    transform: scaleX(0);
+  }
+}
+@keyframes m-balancier {
+  0% { transform: rotate(-14deg); }
+  28% { transform: rotate(9deg); }
+  52% { transform: rotate(-5deg); }
+  72% { transform: rotate(2deg); }
+  88% { transform: rotate(-0.6deg); }
+  100% { transform: rotate(0); }
+}
+@keyframes m-repere {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) scaleX(0);
+  }
+}
+
+/* « backwards » : aucune transformation ne reste après coup (les feuilles
+   en position fixe gardent l'écran pour repère). */
+.m-ecran > .m-entete {
+  animation: m-apparaitre 0.35s ease backwards;
+}
+.m-ecran .m-page > * {
+  animation: m-poser 0.62s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+.m-ecran .m-page > :nth-child(2) { animation-delay: 0.06s; }
+.m-ecran .m-page > :nth-child(3) { animation-delay: 0.12s; }
+.m-ecran .m-page > :nth-child(4) { animation-delay: 0.18s; }
+.m-ecran .m-page > :nth-child(5) { animation-delay: 0.24s; }
+.m-ecran .m-page > :nth-child(n + 6) { animation-delay: 0.3s; }
+
+.m-barre > span {
+  transform-origin: left center;
+  animation: m-remplir 0.95s cubic-bezier(0.22, 1, 0.36, 1) 0.2s backwards;
+}
+
+.m-logo {
+  transform-origin: 50% -40%;
+  animation: m-balancier 1.7s ease-out 0.2s backwards;
+}
+
+/* Onglet actif : un petit fil se dépose sous l'icône. */
+.m-onglet {
+  position: relative;
+  transition: color 0.2s ease, transform 0.12s ease;
+}
+.m-onglet:active {
+  transform: scale(0.92);
+}
+.m-onglet.actif::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 18px;
+  height: 3px;
+  border-radius: 0 0 3px 3px;
+  background: var(--text);
+  transform: translateX(-50%);
+  animation: m-repere 0.4s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+.m-onglet.actif svg {
+  animation: m-poser 0.5s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-delay: 0s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

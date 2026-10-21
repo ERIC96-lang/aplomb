@@ -1,4 +1,7 @@
 import { useEffect, useId, useRef, type ReactNode } from "react";
+import { createPortal } from "react-dom";
+import { motion } from "motion/react";
+import { aplomb, ressort, sortie } from "../lib/motion";
 
 interface ModalProps {
   titre: string;
@@ -55,9 +58,19 @@ export function Modal({ titre, onClose, children, footer }: ModalProps) {
     };
   }, [onClose]);
 
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div
+  // Rendue dans <body> : les transformations des pages et cartes animées ne
+  // doivent pas servir de repère à son positionnement (position: fixed).
+  return createPortal(
+    // Animée à l'ouverture ; à la fermeture aussi si l'appelant l'enveloppe
+    // dans <AnimatePresence>.
+    <motion.div
+      className="modal-overlay"
+      onClick={onClose}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1, transition: { duration: 0.18 } }}
+      exit={{ opacity: 0, transition: { duration: 0.18, delay: 0.04 } }}
+    >
+      <motion.div
         className="modal"
         ref={ref}
         role="dialog"
@@ -65,16 +78,26 @@ export function Modal({ titre, onClose, children, footer }: ModalProps) {
         aria-labelledby={titreId}
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
+        initial={{ opacity: 0, y: -26, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1, transition: { ...aplomb, opacity: { duration: 0.2 } } }}
+        exit={{ opacity: 0, y: 10, scale: 0.98, transition: sortie }}
       >
         <div className="modal-head">
           <h3 id={titreId}>{titre}</h3>
-          <button className="icon-btn" onClick={onClose} aria-label="Fermer">
+          <motion.button
+            className="icon-btn"
+            onClick={onClose}
+            aria-label="Fermer"
+            whileHover={{ rotate: 90 }}
+            transition={ressort}
+          >
             ×
-          </button>
+          </motion.button>
         </div>
         <div className="modal-body">{children}</div>
         {footer && <div className="modal-foot">{footer}</div>}
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>,
+    document.body
   );
 }

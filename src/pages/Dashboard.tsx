@@ -1,3 +1,4 @@
+import { AnimatePresence } from "motion/react";
 import { useMemo, useState, type ReactNode } from "react";
 import { addMonths, format } from "date-fns";
 import { useAppData } from "../state/AppDataContext";
@@ -34,6 +35,7 @@ import {
 } from "../lib/series";
 import { formatMontant, formatMois, moisCourant } from "../lib/format";
 import { StatCard } from "../components/StatCard";
+import { Defilant } from "../components/Defilant";
 import {
   CategorieBars,
   CategorieDonut,
@@ -179,7 +181,7 @@ export function Dashboard() {
             {" − "}charges fixes du mois <strong className="num">{formatMontant(plan.chargesMoisTotal)}</strong>
             {" = "}
             <strong className="num" style={{ color: plan.resteAvantVariable >= 0 ? "var(--pos)" : "var(--neg)" }}>
-              {formatMontant(plan.resteAvantVariable)}
+              <Defilant valeur={plan.resteAvantVariable} />
             </strong>{" "}avant dépenses variables.
           </p>
         ) : (
@@ -295,7 +297,7 @@ export function Dashboard() {
           <div className="flex-between" style={{ marginTop: 14, fontSize: 13 }}>
             <span className="muted">Reste à vivre</span>
             <span className="num" style={{ fontWeight: 700, color: totaux.solde >= 0 ? "var(--pos)" : "var(--neg)" }}>
-              {formatMontant(totaux.solde)}
+              <Defilant valeur={totaux.solde} />
             </span>
           </div>
         </div>
@@ -314,7 +316,7 @@ export function Dashboard() {
         <div className="flex-between" style={{ marginBottom: 4 }}>
           <h2 style={{ margin: 0 }}>Patrimoine total</h2>
           <span className="num" style={{ fontWeight: 750, fontSize: 18 }}>
-            {formatMontant(soldeGlobal(comptes, transactions))}
+            <Defilant valeur={soldeGlobal(comptes, transactions)} />
           </span>
         </div>
         <p className="muted" style={{ fontSize: 12.5, marginTop: 0 }}>
@@ -399,7 +401,7 @@ export function Dashboard() {
                 color: projGlobale.soldeProjete < 0 ? "var(--neg)" : "var(--pos)",
               }}
             >
-              {formatMontant(projGlobale.soldeProjete)}
+              <Defilant valeur={projGlobale.soldeProjete} />
             </span>
           </div>
         </div>
@@ -484,16 +486,19 @@ export function Dashboard() {
         </div>
       ))}
 
-      {perso && (
-        <PersoDashboard
-          prefs={prefs}
-          onChange={(p) => {
-            setPrefs(p);
-            sauverDashboardPrefs(p);
-          }}
-          onClose={() => setPerso(false)}
-        />
-      )}
+      <AnimatePresence>
+        {perso && (
+          <PersoDashboard
+            key="perso"
+            prefs={prefs}
+            onChange={(p) => {
+              setPrefs(p);
+              sauverDashboardPrefs(p);
+            }}
+            onClose={() => setPerso(false)}
+          />
+        )}
+      </AnimatePresence>
     </>
   );
 }

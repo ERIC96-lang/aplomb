@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { statutsBudgets } from "../../../src/lib/budgets";
 import { formatMois, formatMontant, moisCourant } from "../../../src/lib/format";
-import { Entete, PuceSync, Vide, montantGrand } from "../composants";
+import { Entete, MontantDefilant, PuceSync, Vide } from "../composants";
 import { useEtat } from "../etat";
 
 export function Budgets({ onReglages }: { onReglages: () => void }) {
@@ -35,7 +35,7 @@ export function Budgets({ onReglages }: { onReglages: () => void }) {
             {total.plafond > 0 && (
             <div className="m-carte m-hero">
               <div className="m-hero-lib">Dépensé sur vos budgets</div>
-              <div className="m-hero-montant">{montantGrand(formatMontant(total.depense))}</div>
+              <div className="m-hero-montant"><MontantDefilant valeur={total.depense} /></div>
               <div className="m-hero-sous">sur {formatMontant(total.plafond)} de plafonds</div>
               <div className={`m-barre ${ratioTotal >= 1 ? "depasse" : ratioTotal >= 0.8 ? "attention" : ""}`}>
                 <span style={{ width: `${Math.min(100, Math.max(2, ratioTotal * 100))}%` }} />

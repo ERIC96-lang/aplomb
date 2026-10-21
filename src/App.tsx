@@ -5,6 +5,7 @@ import { relaunch } from "@tauri-apps/plugin-process";
 import { estBaseEndommagee } from "./db";
 import { derniereSauvegarde, preparerRestaurationDerniere } from "./lib/backup";
 import { HashRouter, Route, Routes } from "react-router-dom";
+import { AnimatePresence, MotionConfig, motion } from "motion/react";
 import { AppDataProvider, useAppData } from "./state/AppDataContext";
 import { ToastProvider } from "./state/ToastContext";
 import { ThemeProvider } from "./state/ThemeContext";
@@ -57,8 +58,8 @@ function RestaurationSecours() {
     <div style={{ marginTop: 18 }}>
       <p className="muted" style={{ fontSize: 13.5 }}>
         La base semble endommagée. Vous pouvez la remplacer par la sauvegarde automatique du{" "}
-        <strong>{format(derniere.date, "d MMMM yyyy 'à' HH:mm", { locale: fr })}</strong>. La base
-        actuelle est conservée à part, rien n'est supprimé.
+        <strong>{format(derniere.date, "d MMMM yyyy 'à' HH:mm", { locale: fr })}</strong>. La base actuelle
+        est conservée à part, rien n'est supprimé.
       </p>
       <button className="btn primary" onClick={restaurer} disabled={busy}>
         {busy ? "Restauration…" : "Restaurer cette sauvegarde et redémarrer"}
@@ -90,44 +91,62 @@ function Gate({ children }: { children: ReactNode }) {
 
 function LockGate({ children }: { children: ReactNode }) {
   const { pinDefini, verrouille } = useLock();
-  if (pinDefini && verrouille) return <LockScreen />;
-  return <>{children}</>;
+  // Au déverrouillage, l'écran de verrouillage s'efface et l'app apparaît.
+  return (
+    <AnimatePresence mode="wait">
+      {pinDefini && verrouille ? (
+        <motion.div key="verrou" exit={{ opacity: 0, scale: 1.03, transition: { duration: 0.22 } }}>
+          <LockScreen />
+        </motion.div>
+      ) : (
+        <motion.div
+          key="app"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1, transition: { duration: 0.3 } }}
+        >
+          {children}
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
 }
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <LockProvider>
-        <LockGate>
-          <AppDataProvider>
-            <ToastProvider>
-              <Gate>
-                <HashRouter>
-                  <Routes>
-                    <Route element={<Layout />}>
-                      <Route index element={<Dashboard />} />
-                      <Route path="analyse" element={<Analyse />} />
-                      <Route path="comptes" element={<Comptes />} />
-                      <Route path="transactions" element={<Transactions />} />
-                      <Route path="charges" element={<ChargesFixes />} />
-                      <Route path="budgets" element={<Budgets />} />
-                      <Route path="objectifs" element={<Objectifs />} />
-                      <Route path="previsions" element={<Previsions />} />
-                      <Route path="echeancier" element={<Echeancier />} />
-                      <Route path="suggestions" element={<Suggestions />} />
-                      <Route path="factures" element={<Factures />} />
-                      <Route path="import" element={<Import />} />
-                      <Route path="rapports" element={<Rapports />} />
-                      <Route path="parametres" element={<Parametres />} />
-                      <Route path="aide" element={<Aide />} />
-                    </Route>
-                  </Routes>
-                </HashRouter>
-              </Gate>
-            </ToastProvider>
-          </AppDataProvider>
-        </LockGate>
-      </LockProvider>
-    </ThemeProvider>
+    <MotionConfig reducedMotion="user">
+      <ThemeProvider>
+        <LockProvider>
+          <LockGate>
+            <AppDataProvider>
+              <ToastProvider>
+                <Gate>
+                  <HashRouter>
+                    <Routes>
+                      <Route element={<Layout />}>
+                        <Route index element={<Dashboard />} />
+                        <Route path="analyse" element={<Analyse />} />
+                        <Route path="comptes" element={<Comptes />} />
+                        <Route path="transactions" element={<Transactions />} />
+                        <Route path="charges" element={<ChargesFixes />} />
+                        <Route path="budgets" element={<Budgets />} />
+                        <Route path="objectifs" element={<Objectifs />} />
+                        <Route path="previsions" element={<Previsions />} />
+                        <Route path="echeancier" element={<Echeancier />} />
+                        <Route path="suggestions" element={<Suggestions />} />
+                        <Route path="factures" element={<Factures />} />
+                        <Route path="import" element={<Import />} />
+                        <Route path="rapports" element={<Rapports />} />
+                        <Route path="parametres" element={<Parametres />} />
+                        <Route path="aide" element={<Aide />} />
+                      </Route>
+                    </Routes>
+                  </HashRouter>
+                </Gate>
+              </ToastProvider>
+            </AppDataProvider>
+          </LockGate>
+        </LockProvider>
+      </ThemeProvider>
+    </MotionConfig>
   );
 }

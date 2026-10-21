@@ -1,3 +1,4 @@
+import { AnimatePresence } from "motion/react";
 import { useMemo, useState } from "react";
 import { useAppData } from "../state/AppDataContext";
 import { useToast } from "../state/ToastContext";
@@ -251,37 +252,43 @@ export function ChargesFixes() {
         )}
       </div>
 
-      {edit && (
-        <ChargeForm
-          charge={edit === "new" ? null : edit}
-          onClose={() => setEdit(null)}
-          onSaved={async () => {
-            setEdit(null);
-            await rafraichir();
-            toast("Charge fixe enregistrée");
-          }}
-          onDelete={async (id) => {
-            await supprimerChargeFixe(id);
-            setEdit(null);
-            await rafraichir();
-            toast("Charge fixe supprimée");
-          }}
-        />
-      )}
+      <AnimatePresence>
+        {edit && (
+          <ChargeForm
+            key="edit"
+            charge={edit === "new" ? null : edit}
+            onClose={() => setEdit(null)}
+            onSaved={async () => {
+              setEdit(null);
+              await rafraichir();
+              toast("Charge fixe enregistrée");
+            }}
+            onDelete={async (id) => {
+              await supprimerChargeFixe(id);
+              setEdit(null);
+              await rafraichir();
+              toast("Charge fixe supprimée");
+            }}
+          />
+        )}
+      </AnimatePresence>
 
-      {regler && (
-        <ReglerEcheance
-          charge={regler.charge}
-          echeance={regler.echeance}
-          transactions={transactions}
-          onClose={() => setRegler(null)}
-          onDone={async () => {
-            setRegler(null);
-            await rafraichir();
-            toast("Échéance mise à jour");
-          }}
-        />
-      )}
+      <AnimatePresence>
+        {regler && (
+          <ReglerEcheance
+            key="regler"
+            charge={regler.charge}
+            echeance={regler.echeance}
+            transactions={transactions}
+            onClose={() => setRegler(null)}
+            onDone={async () => {
+              setRegler(null);
+              await rafraichir();
+              toast("Échéance mise à jour");
+            }}
+          />
+        )}
+      </AnimatePresence>
     </>
   );
 }

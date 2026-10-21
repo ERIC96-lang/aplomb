@@ -1,3 +1,4 @@
+import { AnimatePresence } from "motion/react";
 import { useEffect, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { formatDistanceToNow } from "date-fns";
@@ -169,68 +170,71 @@ export function SyncMobileCard() {
         </>
       )}
 
-      {appairage && (
-        <Modal
-          titre="Appairer votre iPhone"
-          onClose={() => {
-            setAppairage(null);
-            setCodeVisible(false);
-          }}
-          footer={
-            <>
-              <button className="btn danger" onClick={renouveler}>
-                Nouvelle clé
-              </button>
-              <button
-                className="btn primary"
-                onClick={() => {
-                  setAppairage(null);
-                  setCodeVisible(false);
-                }}
-              >
-                Terminé
-              </button>
-            </>
-          }
-        >
-          <div className="appairage">
-            <div className="appairage-etape">
-              <div className="appairage-num">1</div>
-              <div className="appairage-texte">
-                <strong>Installez l'application</strong>
-                <p>
-                  Scannez ce code avec l'appareil photo de l'iPhone, ouvrez le lien dans{" "}
-                  <strong>Safari</strong>, puis touchez <strong>Partager → Sur l'écran d'accueil</strong>.
-                </p>
+      <AnimatePresence>
+        {appairage && (
+          <Modal
+            key="appairage"
+            titre="Appairer votre iPhone"
+            onClose={() => {
+              setAppairage(null);
+              setCodeVisible(false);
+            }}
+            footer={
+              <>
+                <button className="btn danger" onClick={renouveler}>
+                  Nouvelle clé
+                </button>
+                <button
+                  className="btn primary"
+                  onClick={() => {
+                    setAppairage(null);
+                    setCodeVisible(false);
+                  }}
+                >
+                  Terminé
+                </button>
+              </>
+            }
+          >
+            <div className="appairage">
+              <div className="appairage-etape">
+                <div className="appairage-num">1</div>
+                <div className="appairage-texte">
+                  <strong>Installez l'application</strong>
+                  <p>
+                    Scannez ce code avec l'appareil photo de l'iPhone, ouvrez le lien dans{" "}
+                    <strong>Safari</strong>, puis touchez <strong>Partager → Sur l'écran d'accueil</strong>.
+                  </p>
+                </div>
+                <QrCode valeur={URL_APP_MOBILE} taille={132} label="Adresse de l'application iPhone" />
               </div>
-              <QrCode valeur={URL_APP_MOBILE} taille={132} label="Adresse de l'application iPhone" />
-            </div>
-            <div className="appairage-etape">
-              <div className="appairage-num">2</div>
-              <div className="appairage-texte">
-                <strong>Appairez-la à ce PC</strong>
-                <p>
-                  Ouvrez l'app depuis l'écran d'accueil, touchez <strong>Appairer</strong> et scannez
-                  ce code. Vérifiez que l'iPhone affiche la même empreinte :
-                </p>
-                <div className="appairage-empreinte">{appairage.empreinte}</div>
-                {codeVisible ? (
-                  <code className="appairage-code">{appairage.code}</code>
-                ) : (
-                  <button className="appairage-lien" onClick={() => setCodeVisible(true)}>
-                    Le scan ne fonctionne pas ? Afficher le code
-                  </button>
-                )}
+              <div className="appairage-etape">
+                <div className="appairage-num">2</div>
+                <div className="appairage-texte">
+                  <strong>Appairez-la à ce PC</strong>
+                  <p>
+                    Ouvrez l'app depuis l'écran d'accueil, touchez <strong>Appairer</strong> et scannez
+                    ce code. Vérifiez que l'iPhone affiche la même empreinte :
+                  </p>
+                  <div className="appairage-empreinte">{appairage.empreinte}</div>
+                  {codeVisible ? (
+                    <code className="appairage-code">{appairage.code}</code>
+                  ) : (
+                    <button className="appairage-lien" onClick={() => setCodeVisible(true)}>
+                      Le scan ne fonctionne pas ? Afficher le code
+                    </button>
+                  )}
+                </div>
+                <QrCode valeur={appairage.code} taille={168} label="Code d'appairage" />
               </div>
-              <QrCode valeur={appairage.code} taille={168} label="Code d'appairage" />
+              <p className="appairage-note">
+                <Icon name="lock" size={14} /> Ce second code est la clé de vos données : ne le
+                photographiez pas et ne le partagez pas.
+              </p>
             </div>
-            <p className="appairage-note">
-              <Icon name="lock" size={14} /> Ce second code est la clé de vos données : ne le
-              photographiez pas et ne le partagez pas.
-            </p>
-          </div>
-        </Modal>
-      )}
+          </Modal>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

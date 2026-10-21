@@ -1,6 +1,8 @@
 import { useEffect, type ReactNode } from "react";
 import { Icon, type IconName } from "../../src/components/Icon";
 import { useEtat } from "./etat";
+import { useCountUp } from "../../src/hooks/useCountUp";
+import { formatMontant } from "../../src/lib/format";
 
 /** « à l'instant », « il y a 5 min », « il y a 2 h », « hier », « le 3 oct. ». */
 export function ilYaCourt(iso: string | null): string {
@@ -18,6 +20,11 @@ export function ilYaCourt(iso: string | null): string {
 /** Montant en grand : espace insécable normale (l'espace fine de fr-FR disparaît à cette taille). */
 export function montantGrand(texte: string): string {
   return texte.replace(/\u202f/g, "\u00a0");
+}
+
+/** Grand montant qui défile jusqu'à sa valeur à l'affichage de l'écran. */
+export function MontantDefilant({ valeur }: { valeur: number }) {
+  return <>{montantGrand(formatMontant(useCountUp(valeur)))}</>;
 }
 
 export function Entete({

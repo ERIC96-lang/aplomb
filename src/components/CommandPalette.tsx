@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { AnimatePresence, motion } from "motion/react";
+import { aplomb, ressort, sortie } from "../lib/motion";
 import { useAppData } from "../state/AppDataContext";
 import { Icon, type IconName } from "./Icon";
 import { formatDate } from "../lib/format";
@@ -79,13 +81,15 @@ export function CommandPalette() {
       tx = transactions
         .filter((t) => {
           const desc = (t.description ?? "").toLowerCase();
-          const cat = (t.categorie_id != null ? catNom.get(t.categorie_id) ?? "" : "").toLowerCase();
+          const cat = (t.categorie_id != null ? (catNom.get(t.categorie_id) ?? "") : "").toLowerCase();
           return desc.includes(ql) || cat.includes(ql) || String(t.montant).includes(ql);
         })
         .slice(0, 6)
         .map<Item>((t) => ({
           id: "t:" + t.id,
-          label: t.description || (t.categorie_id != null ? catNom.get(t.categorie_id) ?? "Transaction" : "Transaction"),
+          label:
+            t.description ||
+            (t.categorie_id != null ? (catNom.get(t.categorie_id) ?? "Transaction") : "Transaction"),
           sub: `${formatDate(t.date)} · ${compteNom.get(t.compte_id ?? -1) ?? ""}`,
           icon: t.type === "revenu" ? "trending-up" : t.type === "depense" ? "trending-down" : "card",
           action: () => {
@@ -101,48 +105,68 @@ export function CommandPalette() {
     if (sel >= items.length) setSel(0);
   }, [items.length, sel]);
 
-  if (!open) return null;
-
   return (
-    <div className="cmdk-overlay" onClick={() => setOpen(false)}>
-      <div className="cmdk" onClick={(e) => e.stopPropagation()}>
-        <input
-          ref={inputRef}
-          className="cmdk-input"
-          placeholder="Rechercher une page, une transaction…"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "ArrowDown") {
-              e.preventDefault();
-              setSel((s) => Math.min(items.length - 1, s + 1));
-            } else if (e.key === "ArrowUp") {
-              e.preventDefault();
-              setSel((s) => Math.max(0, s - 1));
-            } else if (e.key === "Enter") {
-              items[sel]?.action();
-            }
-          }}
-        />
-        <div className="cmdk-list">
-          {items.length === 0 ? (
-            <div className="cmdk-empty">Aucun résultat</div>
-          ) : (
-            items.map((it, i) => (
-              <div
-                key={it.id}
-                className={"cmdk-item" + (i === sel ? " on" : "")}
-                onMouseEnter={() => setSel(i)}
-                onClick={it.action}
-              >
-                <span className="cmdk-ico"><Icon name={it.icon} size={17} /></span>
-                <span>{it.label}</span>
-                {it.sub && <span className="cmdk-sub">{it.sub}</span>}
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-    </div>
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          key="cmdk"
+          className="cmdk-overlay"
+          onClick={() => setOpen(false)}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1, transition: { duration: 0.15 } }}
+          exit={{ opacity: 0, transition: sortie }}
+        >
+          <motion.div
+            className="cmdk"
+            onClick={(e) => e.stopPropagation()}
+            initial={{ opacity: 0, y: -18, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1, transition: aplomb }}
+            exit={{ opacity: 0, y: -8, scale: 0.98, transition: sortie }}
+          >
+            <input
+              ref={inputRef}
+              className="cmdk-input"
+              placeholder="Rechercher une page, une transaction…"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "ArrowDown") {
+                  e.preventDefault();
+                  setSel((s) => Math.min(items.length - 1, s + 1));
+                } else if (e.key === "ArrowUp") {
+                  e.preventDefault();
+                  setSel((s) => Math.max(0, s - 1));
+                } else if (e.key === "Enter") {
+                  items[sel]?.action();
+                }
+              }}
+            />
+            <div className="cmdk-list">
+              {items.length === 0 ? (
+                <div className="cmdk-empty">Aucun résultat</div>
+              ) : (
+                items.map((it, i) => (
+                  <div
+                    key={it.id}
+                    className={"cmdk-item" + (i === sel ? " on" : "")}
+                    onMouseEnter={() => setSel(i)}
+                    onClick={it.action}
+                  >
+                    {i === sel && (
+                      <motion.span layoutId="cmdk-sel" className="cmdk-sel" transition={ressort} />
+                    )}
+                    <span className="cmdk-ico">
+                      <Icon name={it.icon} size={17} />
+                    </span>
+                    <span>{it.label}</span>
+                    {it.sub && <span className="cmdk-sub">{it.sub}</span>}
+                  </div>
+                ))
+              )}
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }

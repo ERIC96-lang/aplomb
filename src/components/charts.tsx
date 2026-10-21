@@ -14,8 +14,13 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { motion } from "motion/react";
 import { useTheme } from "../state/ThemeContext";
 import { formatMontant } from "../lib/format";
+import { Defilant } from "./Defilant";
+
+// Rythme commun des graphiques : tracé posé, sans à-coup.
+const ANIM = { animationDuration: 1100, animationEasing: "ease-out" as const };
 import type { PointFlux, PointSolde } from "../lib/series";
 import type { PartCategorie } from "../lib/calculs";
 
@@ -96,6 +101,8 @@ export function SoldeAreaChart({ data }: { data: PointSolde[] }) {
             stroke={c.accent}
             strokeWidth={2.5}
             fill="url(#soldeGrad)"
+            {...ANIM}
+            animationDuration={1400}
             dot={false}
             activeDot={{ r: 5, strokeWidth: 0 }}
           />
@@ -122,14 +129,24 @@ export function FluxBarChart({ data }: { data: PointFlux[] }) {
             tickFormatter={fmtCourt}
           />
           <Tooltip content={<TooltipMontant />} cursor={{ fill: c.grid, opacity: 0.4 }} />
-          <Bar dataKey="revenus" name="Revenus" fill={c.green} radius={[5, 5, 0, 0]} maxBarSize={26} />
-          <Bar dataKey="depenses" name="Dépenses" fill={c.red} radius={[5, 5, 0, 0]} maxBarSize={26} />
+          <Bar dataKey="revenus" name="Revenus" fill={c.green} radius={[5, 5, 0, 0]} maxBarSize={26} {...ANIM} />
+          <Bar
+            dataKey="depenses"
+            name="Dépenses"
+            fill={c.red}
+            radius={[5, 5, 0, 0]}
+            maxBarSize={26}
+            {...ANIM}
+            animationBegin={120}
+          />
           <Line
             type="monotone"
             dataKey="epargne"
             name="Épargne"
             stroke={c.teal}
             strokeWidth={2.5}
+            {...ANIM}
+            animationBegin={450}
             dot={{ r: 3, fill: c.teal, strokeWidth: 0 }}
           />
         </ComposedChart>
@@ -158,6 +175,9 @@ export function CategorieDonut({
             outerRadius={100}
             paddingAngle={2}
             stroke="none"
+            startAngle={90}
+            endAngle={-270}
+            {...ANIM}
           >
             {data.map((r) => (
               <Cell key={String(r.categorie_id)} fill={r.couleur} />
@@ -180,7 +200,7 @@ export function CategorieDonut({
             Total
           </div>
           <div className="num" style={{ fontSize: 20, fontWeight: 750 }}>
-            {formatMontant(total)}
+            <Defilant valeur={total} />
           </div>
         </div>
       </div>
@@ -238,12 +258,14 @@ export function Gauge({
           </linearGradient>
         </defs>
         <path className="gauge-track" d="M 20 100 A 80 80 0 0 1 180 100" strokeWidth={14} />
-        <path
+        <motion.path
           className="gauge-fill"
           d="M 20 100 A 80 80 0 0 1 180 100"
           strokeWidth={14}
           strokeDasharray={circ}
-          strokeDashoffset={offset}
+          initial={{ strokeDashoffset: circ }}
+          animate={{ strokeDashoffset: offset }}
+          transition={{ type: "spring", stiffness: 70, damping: 16, delay: 0.15 }}
         />
       </svg>
       <div
@@ -280,7 +302,7 @@ export function Heatmap({ data }: { data: number[] }) {
           <div
             key={i}
             className="heat-cell"
-            style={{ background: bg }}
+            style={{ background: bg, animationDelay: `${i * 14}ms` }}
             title={`Jour ${i + 1} : ${formatMontant(v)}`}
           />
         );

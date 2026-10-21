@@ -50,7 +50,8 @@ export function App() {
 
   return (
     <div className="m-app">
-      <main>
+      {/* Remonté à chaque onglet : l'écran et ses cartes se posent en cascade. */}
+      <main key={onglet} className="m-ecran">
         {onglet === "apercu" && <Apercu onReglages={allerReglages} />}
         {onglet === "operations" && <Operations onReglages={allerReglages} />}
         {onglet === "budgets" && <Budgets onReglages={allerReglages} />}

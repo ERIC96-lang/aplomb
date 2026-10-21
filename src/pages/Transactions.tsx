@@ -1,3 +1,4 @@
+import { AnimatePresence } from "motion/react";
 import { useMemo, useState } from "react";
 import { useAppData } from "../state/AppDataContext";
 import { useToast } from "../state/ToastContext";
@@ -319,19 +320,22 @@ export function Transactions() {
         )}
       </div>
 
-      {modal && (
-        <TransactionModal
-          transaction={modal === "new" ? null : modal}
-          presets={modal === "new" ? presets : undefined}
-          onClose={() => { setModal(null); setPresets(undefined); }}
-          onSaved={async () => {
-            setModal(null);
-            setPresets(undefined);
-            await rafraichir();
-            toast("Transaction enregistrée");
-          }}
-        />
-      )}
+      <AnimatePresence>
+        {modal && (
+          <TransactionModal
+            key="modal"
+            transaction={modal === "new" ? null : modal}
+            presets={modal === "new" ? presets : undefined}
+            onClose={() => { setModal(null); setPresets(undefined); }}
+            onSaved={async () => {
+              setModal(null);
+              setPresets(undefined);
+              await rafraichir();
+              toast("Transaction enregistrée");
+            }}
+          />
+        )}
+      </AnimatePresence>
     </>
   );
 }

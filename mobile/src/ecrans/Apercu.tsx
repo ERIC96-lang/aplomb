@@ -8,7 +8,7 @@ import { montantActuelObjectif } from "../../../src/lib/objectifs";
 import { planDuMois } from "../../../src/lib/planMois";
 import { projeterFinDeMois } from "../../../src/lib/projection";
 import type { CompteType } from "../../../src/db/types";
-import { Entete, PuceSync, Vide, ilYaCourt, montantGrand } from "../composants";
+import { Entete, MontantDefilant, PuceSync, Vide, ilYaCourt } from "../composants";
 import { useEtat } from "../etat";
 
 const TYPES: Record<CompteType, string> = {
@@ -78,7 +78,7 @@ export function Apercu({ onReglages }: { onReglages: () => void }) {
             <div className="m-carte m-hero">
               <div className="m-hero-lib">Solde total</div>
               <div className={`m-hero-montant ${donnees.solde < 0 ? "neg" : ""}`}>
-                {montantGrand(formatMontant(donnees.solde))}
+                <MontantDefilant valeur={donnees.solde} />
               </div>
               <div className="m-hero-sous">
                 {comptes.length} compte{comptes.length > 1 ? "s" : ""} · données du PC{" "}
@@ -131,7 +131,7 @@ export function Apercu({ onReglages }: { onReglages: () => void }) {
                 <div className="m-fin-mois">
                   <span>Solde projeté</span>
                   <strong className={donnees.finDeMois.projete < 0 ? "neg" : "pos"}>
-                    {montantGrand(formatMontant(donnees.finDeMois.projete))}
+                    <MontantDefilant valeur={donnees.finDeMois.projete} />
                   </strong>
                 </div>
               </div>

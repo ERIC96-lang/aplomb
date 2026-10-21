@@ -1,9 +1,11 @@
+import { AnimatePresence } from "motion/react";
 import { useMemo, useState } from "react";
 import { differenceInCalendarMonths } from "date-fns";
 import { useAppData } from "../state/AppDataContext";
 import { useToast } from "../state/ToastContext";
 import { Modal } from "../components/Modal";
 import { Icon } from "../components/Icon";
+import { Defilant } from "../components/Defilant";
 import {
   ajusterMontantObjectif,
   creerObjectif,
@@ -81,24 +83,27 @@ export function Objectifs() {
         </div>
       )}
 
-      {edit && (
-        <ObjectifForm
-          objectif={edit === "new" ? null : edit}
-          comptes={comptes}
-          onClose={() => setEdit(null)}
-          onSaved={async () => {
-            setEdit(null);
-            await rafraichir();
-            toast("Objectif enregistré");
-          }}
-          onDelete={async (id) => {
-            await supprimerObjectif(id);
-            setEdit(null);
-            await rafraichir();
-            toast("Objectif supprimé");
-          }}
-        />
-      )}
+      <AnimatePresence>
+        {edit && (
+          <ObjectifForm
+            key="edit"
+            objectif={edit === "new" ? null : edit}
+            comptes={comptes}
+            onClose={() => setEdit(null)}
+            onSaved={async () => {
+              setEdit(null);
+              await rafraichir();
+              toast("Objectif enregistré");
+            }}
+            onDelete={async (id) => {
+              await supprimerObjectif(id);
+              setEdit(null);
+              await rafraichir();
+              toast("Objectif supprimé");
+            }}
+          />
+        )}
+      </AnimatePresence>
     </>
   );
 }
@@ -163,7 +168,7 @@ function ObjectifCard({
       </div>
 
       <div className="num" style={{ fontSize: 24, fontWeight: 750, margin: "10px 0 2px", color: o.couleur }}>
-        {formatMontant(montantActuel)}
+        <Defilant valeur={montantActuel} />
         <span className="muted" style={{ fontSize: 15, fontWeight: 500 }}> / {formatMontant(o.montant_cible)}</span>
       </div>
       <div className="progress" style={{ height: 10, marginTop: 8 }}>

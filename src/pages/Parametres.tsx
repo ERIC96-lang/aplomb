@@ -1,3 +1,4 @@
+import { AnimatePresence } from "motion/react";
 import { useEffect, useState } from "react";
 import { useAppData } from "../state/AppDataContext";
 import { useToast } from "../state/ToastContext";
@@ -472,38 +473,46 @@ export function Parametres() {
         </p>
       </div>
 
-      {edit && (
-        <CategorieForm
-          categorie={edit === "new" ? null : edit}
-          onClose={() => setEdit(null)}
-          onSaved={async () => {
-            setEdit(null);
-            await rafraichir();
-            toast("Catégorie enregistrée");
-          }}
-          onDelete={async (id) => {
-            await supprimerCategorie(id);
-            setEdit(null);
-            await rafraichir();
-            toast("Catégorie supprimée");
-          }}
-        />
-      )}
+      <AnimatePresence>
+        {edit && (
+          <CategorieForm
+            key="edit"
+            categorie={edit === "new" ? null : edit}
+            onClose={() => setEdit(null)}
+            onSaved={async () => {
+              setEdit(null);
+              await rafraichir();
+              toast("Catégorie enregistrée");
+            }}
+            onDelete={async (id) => {
+              await supprimerCategorie(id);
+              setEdit(null);
+              await rafraichir();
+              toast("Catégorie supprimée");
+            }}
+          />
+        )}
+      </AnimatePresence>
 
-      {pinMode && (
-        <PinModal mode={pinMode} onClose={() => setPinMode(null)} toast={toast} />
-      )}
+      <AnimatePresence>
+        {pinMode && (
+          <PinModal key="pinMode" mode={pinMode} onClose={() => setPinMode(null)} toast={toast} />
+        )}
+      </AnimatePresence>
 
-      {convCible && (
-        <ConversionModal
-          base={devise}
-          cible={convCible}
-          onClose={() => setConvCible(null)}
-          onChanger={changerDevise}
-          onRafraichir={rafraichir}
-          toast={toast}
-        />
-      )}
+      <AnimatePresence>
+        {convCible && (
+          <ConversionModal
+            key="convCible"
+            base={devise}
+            cible={convCible}
+            onClose={() => setConvCible(null)}
+            onChanger={changerDevise}
+            onRafraichir={rafraichir}
+            toast={toast}
+          />
+        )}
+      </AnimatePresence>
     </>
   );
 }

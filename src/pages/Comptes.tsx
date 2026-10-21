@@ -1,8 +1,10 @@
+import { AnimatePresence } from "motion/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAppData } from "../state/AppDataContext";
 import { useToast } from "../state/ToastContext";
 import { Modal } from "../components/Modal";
 import { Icon } from "../components/Icon";
+import { Defilant } from "../components/Defilant";
 import { soldeCompteAvecInitial } from "../lib/calculs";
 import { formatMontant, aujourdhui } from "../lib/format";
 import {
@@ -117,7 +119,7 @@ export function Comptes() {
                     color: solde < 0 ? "var(--red)" : "var(--text)",
                   }}
                 >
-                  {formatMontant(solde)}
+                  <Defilant valeur={solde} />
                 </div>
                 <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>
                   Solde initial : {formatMontant(c.solde_initial)}
@@ -200,17 +202,20 @@ export function Comptes() {
         </div>
       )}
 
-      {edit && (
-        <CompteForm
-          compte={edit === "new" ? null : edit}
-          onClose={() => setEdit(null)}
-          onSaved={async () => {
-            setEdit(null);
-            await rafraichir();
-            toast("Compte enregistré");
-          }}
-        />
-      )}
+      <AnimatePresence>
+        {edit && (
+          <CompteForm
+            key="edit"
+            compte={edit === "new" ? null : edit}
+            onClose={() => setEdit(null)}
+            onSaved={async () => {
+              setEdit(null);
+              await rafraichir();
+              toast("Compte enregistré");
+            }}
+          />
+        )}
+      </AnimatePresence>
     </>
   );
 }
