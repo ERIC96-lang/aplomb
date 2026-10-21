@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useAppData } from "../state/AppDataContext";
+import { SelecteurMois } from "../components/ui/SelecteurMois";
 import { Icon } from "../components/Icon";
 import { InsightRow } from "../components/Insights";
 import { genererInsights } from "../lib/insights";
@@ -42,13 +43,7 @@ export function Analyse() {
           <h1>Analyse</h1>
           <div className="sub">Ce que l'app repère automatiquement dans tes finances</div>
         </div>
-        <select className="select" style={{ width: 170 }} value={mois} onChange={(e) => setMois(e.target.value)}>
-          {moisList.map((m) => (
-            <option key={m} value={m}>
-              {formatMois(m)}
-            </option>
-          ))}
-        </select>
+        <SelecteurMois valeur={mois} onChange={setMois} disponibles={moisList} />
       </div>
 
       {insights.length === 0 ? (

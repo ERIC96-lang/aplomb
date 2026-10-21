@@ -2,7 +2,10 @@ import { AnimatePresence } from "motion/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAppData } from "../state/AppDataContext";
 import { useToast } from "../state/ToastContext";
+import { useNavigate } from "react-router-dom";
 import { Modal } from "../components/Modal";
+import { MenuActions } from "../components/ui/Menu";
+import { useDemandeNavigation } from "../hooks/useActionDemandee";
 import { Icon } from "../components/Icon";
 import { Defilant } from "../components/Defilant";
 import { soldeCompteAvecInitial } from "../lib/calculs";
@@ -25,6 +28,7 @@ const TYPES: { value: CompteType; label: string }[] = [
 export function Comptes() {
   const { comptes, transactions, chargesFixes, rafraichir } = useAppData();
   const toast = useToast();
+  const navigate = useNavigate();
   const [edit, setEdit] = useState<Compte | "new" | null>(null);
   const [archives, setArchives] = useState<Compte[]>([]);
 
@@ -57,6 +61,10 @@ export function Comptes() {
     await Promise.all([rafraichir(), chargerArchives()]);
     toast("Compte supprimé");
   }
+
+  useDemandeNavigation((d) => {
+    if (d.action === "compte") setEdit("new");
+  });
 
   async function purgerVides() {
     for (const a of archivesVides) await supprimerCompte(a.id);
@@ -124,20 +132,39 @@ export function Comptes() {
                 <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>
                   Solde initial : {formatMontant(c.solde_initial)}
                 </div>
-                <div className="flex" style={{ marginTop: 16 }}>
-                  <button className="btn sm" onClick={() => setEdit(c)}>
-                    Renommer
-                  </button>
+                <div className="flex-between" style={{ marginTop: 14 }}>
                   <button
-                    className="btn sm danger"
-                    onClick={async () => {
-                      await archiverCompte(c.id, true);
-                      await rafraichir();
-                      toast("Compte archivé");
-                    }}
+                    className="btn sm ghost"
+                    onClick={() => navigate("/transactions", { state: { compte: c.id } })}
                   >
-                    Archiver
+                    Voir les opérations <Icon name="chevron-right" size={14} />
                   </button>
+                  <MenuActions
+                    label={`Actions pour ${c.nom}`}
+                    elements={[
+                      { id: "modifier", label: "Modifier", ico: "edit", description: "Nom, type, solde initial", action: () => setEdit(c) },
+                      {
+                        id: "depense",
+                        label: "Nouvelle opération",
+                        ico: "plus",
+                        description: "Dépense, revenu ou virement sur ce compte",
+                        action: () => navigate("/transactions", { state: { action: "depense", compte: c.id } }),
+                      },
+                      { separateur: true },
+                      {
+                        id: "archiver",
+                        label: "Archiver",
+                        ico: "folder",
+                        description: "Masqué, historique conservé",
+                        danger: true,
+                        action: async () => {
+                          await archiverCompte(c.id, true);
+                          await rafraichir();
+                          toast("Compte archivé");
+                        },
+                      },
+                    ]}
+                  />
                 </div>
               </div>
             );

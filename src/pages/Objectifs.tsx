@@ -3,7 +3,10 @@ import { useMemo, useState } from "react";
 import { differenceInCalendarMonths } from "date-fns";
 import { useAppData } from "../state/AppDataContext";
 import { useToast } from "../state/ToastContext";
+import { useNavigate } from "react-router-dom";
 import { Modal } from "../components/Modal";
+import { MenuActions } from "../components/ui/Menu";
+import { useDemandeNavigation } from "../hooks/useActionDemandee";
 import { Icon } from "../components/Icon";
 import { Defilant } from "../components/Defilant";
 import {
@@ -32,6 +35,10 @@ export function Objectifs() {
   const { objectifs, comptes, transactions, rafraichir } = useAppData();
   const toast = useToast();
   const [edit, setEdit] = useState<Objectif | "new" | null>(null);
+  const navigate = useNavigate();
+  useDemandeNavigation((d) => {
+    if (d.action === "objectif") setEdit("new");
+  });
 
   // Épargne mensuelle moyenne (3 derniers mois) : projection des objectifs manuels.
   const epargneMoyenne = useMemo(() => {
@@ -76,6 +83,13 @@ export function Objectifs() {
               rythme={rythmeMensuelObjectif(o, transactions, objectifs) ?? epargneMoyenne}
               rythmeReel={modeSuivi(o) !== "manuel"}
               onEdit={() => setEdit(o)}
+              onSupprimer={async () => {
+                if (!window.confirm(`Supprimer l'objectif « ${o.nom} » ?`)) return;
+                await supprimerObjectif(o.id);
+                await rafraichir();
+                toast("Objectif supprimé");
+              }}
+              onVoirCompte={o.compte_id != null ? () => navigate("/transactions", { state: { compte: o.compte_id! } }) : undefined}
               onChange={rafraichir}
               toast={toast}
             />
@@ -117,6 +131,8 @@ function ObjectifCard({
   rythme,
   rythmeReel,
   onEdit,
+  onSupprimer,
+  onVoirCompte,
   onChange,
   toast,
 }: {
@@ -128,6 +144,8 @@ function ObjectifCard({
   rythme: number;
   rythmeReel: boolean;
   onEdit: () => void;
+  onSupprimer: () => void;
+  onVoirCompte?: () => void;
   onChange: () => Promise<void>;
   toast: (m: string) => void;
 }) {
@@ -162,9 +180,17 @@ function ObjectifCard({
     <div className="card">
       <div className="flex-between">
         <div style={{ fontWeight: 700, fontSize: 16 }}>{o.nom}</div>
-        <button className="icon-btn" onClick={onEdit} aria-label="Modifier" style={{ fontSize: 16 }}>
-          <Icon name="edit" size={16} />
-        </button>
+        <MenuActions
+          label={`Actions pour ${o.nom}`}
+          elements={[
+            { id: "modifier", label: "Modifier", ico: "edit", description: "Cible, échéance, suivi", action: onEdit },
+            ...(onVoirCompte
+              ? [{ id: "compte", label: "Voir les opérations du compte", ico: "card" as const, action: onVoirCompte }]
+              : []),
+            { separateur: true },
+            { id: "supprimer", label: "Supprimer", ico: "trash", danger: true, action: onSupprimer },
+          ]}
+        />
       </div>
 
       <div className="num" style={{ fontSize: 24, fontWeight: 750, margin: "10px 0 2px", color: o.couleur }}>

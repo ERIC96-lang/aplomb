@@ -37,7 +37,16 @@ export type IconName =
   | "chevron-right"
   | "chevron-left"
   | "face-id"
-  | "bulb";
+  | "bulb"
+  | "more"
+  | "copy"
+  | "eye"
+  | "filter"
+  | "sidebar"
+  | "undo"
+  | "power"
+  | "phone"
+  | "tag";
 
 const PATHS: Record<IconName, ReactNode> = {
   "chevron-up": <polyline points="6 15 12 9 18 15" />,
@@ -246,6 +255,56 @@ const PATHS: Record<IconName, ReactNode> = {
   ),
   "chevron-right": <polyline points="9 18 15 12 9 6" />,
   "chevron-left": <polyline points="15 18 9 12 15 6" />,
+  more: (
+    <>
+      <circle cx="5" cy="12" r="1.2" fill="currentColor" />
+      <circle cx="12" cy="12" r="1.2" fill="currentColor" />
+      <circle cx="19" cy="12" r="1.2" fill="currentColor" />
+    </>
+  ),
+  copy: (
+    <>
+      <rect x="9" y="9" width="12" height="12" rx="2.5" />
+      <path d="M5 15H4.5A1.5 1.5 0 0 1 3 13.5v-9A1.5 1.5 0 0 1 4.5 3h9A1.5 1.5 0 0 1 15 4.5V5" />
+    </>
+  ),
+  eye: (
+    <>
+      <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" />
+      <circle cx="12" cy="12" r="3" />
+    </>
+  ),
+  filter: <path d="M3 5h18l-7 8.5V19l-4 2v-7.5z" />,
+  sidebar: (
+    <>
+      <rect x="3" y="4" width="18" height="16" rx="2.5" />
+      <line x1="9" y1="4" x2="9" y2="20" />
+    </>
+  ),
+  undo: (
+    <>
+      <polyline points="9 14 4 9 9 4" />
+      <path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" />
+    </>
+  ),
+  phone: (
+    <>
+      <rect x="6.5" y="2" width="11" height="20" rx="2.5" />
+      <line x1="10.5" y1="18" x2="13.5" y2="18" />
+    </>
+  ),
+  tag: (
+    <>
+      <path d="M3 12V4.5A1.5 1.5 0 0 1 4.5 3H12l9 9-9 9z" />
+      <circle cx="8" cy="8" r="1.4" />
+    </>
+  ),
+  power: (
+    <>
+      <path d="M18.4 6.6a9 9 0 1 1-12.8 0" />
+      <line x1="12" y1="2" x2="12" y2="12" />
+    </>
+  ),
   "face-id": (
     <>
       <path d="M3 7V5a2 2 0 0 1 2-2h2" />

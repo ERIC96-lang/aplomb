@@ -6,6 +6,7 @@ import { SoldeAreaChart } from "../components/charts";
 import { calculerPrevisions, estimerRevenus } from "../lib/previsions";
 import { lireProfil } from "../lib/profil";
 import { formatMontant, formatMois } from "../lib/format";
+import { Segmente } from "../components/ui/Segmente";
 
 type Scenario = "bas" | "attendu" | "haut";
 
@@ -40,25 +41,23 @@ export function Previsions() {
         </div>
         <div className="flex" style={{ gap: 10 }}>
           {aScenarios && (
-            <div className="segmented">
-              <button className={scenario === "bas" ? "active" : ""} onClick={() => setScenario("bas")}>
-                Prudent
-              </button>
-              <button className={scenario === "attendu" ? "active" : ""} onClick={() => setScenario("attendu")}>
-                Attendu
-              </button>
-              <button className={scenario === "haut" ? "active" : ""} onClick={() => setScenario("haut")}>
-                Optimiste
-              </button>
-            </div>
+            <Segmente
+              label="Scénario"
+              valeur={scenario}
+              onChange={setScenario}
+              options={[
+                { value: "bas", label: "Prudent" },
+                { value: "attendu", label: "Attendu" },
+                { value: "haut", label: "Optimiste" },
+              ]}
+            />
           )}
-          <div className="segmented">
-            {[3, 6, 12].map((h) => (
-              <button key={h} className={horizon === h ? "active" : ""} onClick={() => setHorizon(h)}>
-                {h} mois
-              </button>
-            ))}
-          </div>
+          <Segmente
+            label="Horizon"
+            valeur={horizon}
+            onChange={setHorizon}
+            options={[3, 6, 12].map((h) => ({ value: h, label: `${h} mois` }))}
+          />
         </div>
       </div>
 

@@ -3,6 +3,9 @@ import { useMemo, useState } from "react";
 import { useAppData } from "../state/AppDataContext";
 import { useToast } from "../state/ToastContext";
 import { Modal } from "../components/Modal";
+import { MenuActions, type EntreeMenu } from "../components/ui/Menu";
+import { SelecteurMois } from "../components/ui/SelecteurMois";
+import { useDemandeNavigation } from "../hooks/useActionDemandee";
 import { Icon } from "../components/Icon";
 import { TransactionModal } from "../components/TransactionModal";
 import {
@@ -33,7 +36,10 @@ export function ChargesFixes() {
   const { chargesFixes, echeances, comptes, categories, transactions, rafraichir } =
     useAppData();
   const toast = useToast();
-  const mois = moisCourant();
+  // Mois consulté : le mois courant par défaut, les précédents en historique.
+  const [mois, setMois] = useState(moisCourant());
+  const moisEcheances = useMemo(() => [...new Set(echeances.map((e) => e.mois))], [echeances]);
+  const estMoisCourant = mois === moisCourant();
 
   const [edit, setEdit] = useState<ChargeFixe | "new" | null>(null);
   const [regler, setRegler] = useState<{ charge: ChargeFixe; echeance: Echeance } | null>(
@@ -88,6 +94,53 @@ export function ChargesFixes() {
     toast(`« ${charge.nom} » de nouveau à régler`);
   }
 
+  useDemandeNavigation((d) => {
+    if (d.action === "charge" && comptes.length > 0) setEdit("new");
+  });
+
+  async function basculerActive(c: ChargeFixe) {
+    await majChargeFixe(c.id, {
+      nom: c.nom,
+      montant_attendu: c.montant_attendu,
+      compte_id: c.compte_id,
+      categorie_id: c.categorie_id,
+      jour_echeance: c.jour_echeance,
+      actif: c.actif ? 0 : 1,
+      periodicite: c.periodicite,
+    });
+    await rafraichir();
+    toast(c.actif ? `« ${c.nom} » désactivée` : `« ${c.nom} » réactivée`);
+  }
+
+  async function supprimerCharge(c: ChargeFixe) {
+    if (!window.confirm(`Supprimer la charge fixe « ${c.nom} » ? Son historique d'échéances sera effacé (les dépenses déjà saisies restent). Pour le garder, désactive-la plutôt.`)) return;
+    await supprimerChargeFixe(c.id);
+    await rafraichir();
+    toast("Charge fixe supprimée");
+  }
+
+  /** Actions secondaires d'une échéance (menu ⋯) ; l'action principale reste un bouton. */
+  function actionsEcheance(charge: ChargeFixe, e: Echeance): EntreeMenu[] {
+    const peutReglerAilleurs =
+      e.statut !== "reglee_ailleurs" && (e.transaction_id == null || !!depenseAuto(charge, e));
+    return [
+      ...(peutReglerAilleurs
+        ? [{
+            id: "ailleurs",
+            label: "Réglée ailleurs",
+            ico: "check" as const,
+            description: "PayPal… : sans dépense ni effet sur les soldes",
+            action: () => void reglerAilleurs(charge, e),
+          }]
+        : []),
+      e.justificatif_path
+        ? { id: "voir", label: "Voir le justificatif", ico: "eye", action: () => void ouvrirJustificatif(e.justificatif_path!) }
+        : { id: "joindre", label: "Joindre un justificatif", ico: "paperclip", action: () => void attacherJustificatif(charge, e) },
+      { separateur: true },
+      { id: "charge", label: "Modifier la charge", ico: "edit", action: () => setEdit(charge) },
+    ];
+  }
+
   async function attacherJustificatif(charge: ChargeFixe, e: Echeance) {
     const path = await choisirEtCopierJustificatif(charge.nom, e.mois);
     if (!path) return;
@@ -118,9 +171,14 @@ export function ChargesFixes() {
 
       {/* Échéances du mois */}
       <div className="card" style={{ marginBottom: 20 }}>
-        <h2>Échéances de {formatMois(mois)}</h2>
+        <div className="flex-between" style={{ marginBottom: 16, flexWrap: "wrap" }}>
+          <h2 style={{ margin: 0 }}>Échéances de {formatMois(mois)}</h2>
+          <SelecteurMois valeur={mois} onChange={setMois} disponibles={moisEcheances} />
+        </div>
         {echeancesMois.length === 0 ? (
-          <p className="muted">Aucune charge fixe active ce mois-ci.</p>
+          <p className="muted">
+            {estMoisCourant ? "Aucune charge fixe active ce mois-ci." : "Aucune échéance enregistrée pour ce mois."}
+          </p>
         ) : (
           <div className="table-wrap">
             <table className="data">
@@ -165,31 +223,7 @@ export function ChargesFixes() {
                             Modifier
                           </button>
                         )}
-                        {e.statut !== "reglee_ailleurs" && (e.transaction_id == null || depenseAuto(charge, e)) && (
-                          <button
-                            className="btn sm"
-                            onClick={() => reglerAilleurs(charge, e)}
-                            style={{ whiteSpace: "nowrap" }}
-                            title="Payée hors de tes comptes suivis (ex. PayPal) : marquée réglée, sans dépense ni effet sur tes soldes"
-                          >
-                            Réglée ailleurs
-                          </button>
-                        )}
-                        {e.justificatif_path ? (
-                          <button
-                            className="btn sm"
-                            onClick={() => ouvrirJustificatif(e.justificatif_path!)}
-                          >
-                            <Icon name="paperclip" size={14} /> Voir
-                          </button>
-                        ) : (
-                          <button
-                            className="btn sm"
-                            onClick={() => attacherJustificatif(charge, e)}
-                          >
-                            <Icon name="paperclip" size={14} /> Justif.
-                          </button>
-                        )}
+                        <MenuActions label={`Autres actions pour ${charge.nom}`} elements={actionsEcheance(charge, e)} />
                       </div>
                     </td>
                   </tr>
@@ -243,7 +277,23 @@ export function ChargesFixes() {
                         </span>
                       )}
                     </td>
-                    <td className="right muted">modifier ›</td>
+                    <td className="right" style={{ padding: "6px 8px" }}>
+                      <MenuActions
+                        label={`Actions pour ${c.nom}`}
+                        elements={[
+                          { id: "modifier", label: "Modifier", ico: "edit", action: () => setEdit(c) },
+                          {
+                            id: "actif",
+                            label: c.actif ? "Désactiver" : "Réactiver",
+                            ico: "power",
+                            description: c.actif ? "Plus d'échéance générée" : "Échéances à nouveau générées",
+                            action: () => void basculerActive(c),
+                          },
+                          { separateur: true },
+                          { id: "supprimer", label: "Supprimer", ico: "trash", danger: true, action: () => void supprimerCharge(c) },
+                        ]}
+                      />
+                    </td>
                   </tr>
                 ))}
               </tbody>

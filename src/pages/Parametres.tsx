@@ -1,3 +1,5 @@
+import { useSearchParams } from "react-router-dom";
+import { Onglets, type Onglet } from "../components/ui/Segmente";
 import { AnimatePresence } from "motion/react";
 import { useEffect, useState } from "react";
 import { useAppData } from "../state/AppDataContext";
@@ -33,11 +35,39 @@ import { DEVISES, formatMontant } from "../lib/format";
 import type { Categorie, CategorieType } from "../db/types";
 
 const COULEURS = [
-  "#ef4444", "#f59e0b", "#eab308", "#84cc16", "#22c55e", "#10b981",
-  "#14b8a6", "#06b6d4", "#3b82f6", "#6366f1", "#8b5cf6", "#ec4899", "#64748b",
+  "#ef4444",
+  "#f59e0b",
+  "#eab308",
+  "#84cc16",
+  "#22c55e",
+  "#10b981",
+  "#14b8a6",
+  "#06b6d4",
+  "#3b82f6",
+  "#6366f1",
+  "#8b5cf6",
+  "#ec4899",
+  "#64748b",
+];
+
+type OngletParametres = "profil" | "categories" | "donnees" | "iphone" | "securite" | "apropos";
+
+const ONGLETS_PARAMETRES: Onglet<OngletParametres>[] = [
+  { value: "profil", label: "Profil & devise", ico: "wallet" },
+  { value: "categories", label: "Catégories", ico: "tag" },
+  { value: "donnees", label: "Données", ico: "folder" },
+  { value: "iphone", label: "iPhone", ico: "phone" },
+  { value: "securite", label: "Sécurité", ico: "lock" },
+  { value: "apropos", label: "À propos", ico: "help" },
 ];
 
 export function Parametres() {
+  // Rubrique ouverte, dans l'adresse (?onglet=…) : un lien peut viser une rubrique.
+  const [params, setParams] = useSearchParams();
+  const onglet: OngletParametres = ONGLETS_PARAMETRES.some((o) => o.value === params.get("onglet"))
+    ? (params.get("onglet") as OngletParametres)
+    : "profil";
+  const changerOnglet = (o: OngletParametres) => setParams({ onglet: o }, { replace: true });
   const { categories, transactions, comptes, devise, changerDevise, rafraichir } = useAppData();
   const toast = useToast();
   const { pinDefini, delaiAutoLock, setDelaiAutoLock, helloDispo, biometrie, setBiometrie } = useLock();
@@ -116,7 +146,12 @@ export function Parametres() {
   }
 
   async function reset() {
-    if (!window.confirm("Tout réinitialiser ? Cela efface TOUTES tes données : comptes, transactions, charges, budgets, objectifs, factures et profil. (Seules les catégories par défaut sont conservées.) Action irréversible.")) return;
+    if (
+      !window.confirm(
+        "Tout réinitialiser ? Cela efface TOUTES tes données : comptes, transactions, charges, budgets, objectifs, factures et profil. (Seules les catégories par défaut sont conservées.) Action irréversible.",
+      )
+    )
+      return;
     setBusyDemo(true);
     try {
       await reinitialiserDonnees();
@@ -137,341 +172,435 @@ export function Parametres() {
       <div className="page-head">
         <div>
           <h1>Paramètres</h1>
-          <div className="sub">Catégories, sauvegarde et export de tes données</div>
+          <div className="sub">Profil, catégories, données, iPhone et sécurité</div>
         </div>
       </div>
 
-      {/* Profil */}
-      <div className="card" style={{ marginBottom: 20 }}>
-        <h2>Mon profil</h2>
-        <p className="muted" style={{ fontSize: 13, marginTop: -8 }}>
-          Renseigne ton revenu et ton jour de paie : l'app génère automatiquement ton salaire chaque mois
-          et projette tes prochains mois dans les <strong>Prévisions</strong>.
-        </p>
-        <div className="row">
-          <div className="field">
-            <label>Revenu mensuel net</label>
-            <input className="input" inputMode="decimal" value={revenu} onChange={(e) => setRevenu(e.target.value)} placeholder="ex. 2600" />
-          </div>
-          <div className="field">
-            <label>Jour de paie</label>
-            <input className="input" type="number" min={1} max={31} value={jourPaie} onChange={(e) => setJourPaie(e.target.value)} />
-          </div>
-        </div>
-        <div className="row">
-          <div className="field">
-            <label>Compte principal (versement du salaire)</label>
-            <select className="select" value={comptePrincipal} onChange={(e) => setComptePrincipal(e.target.value === "" ? "" : Number(e.target.value))}>
-              <option value="">—</option>
-              {comptes.map((c) => <option key={c.id} value={c.id}>{c.nom}</option>)}
-            </select>
-          </div>
-          <div className="field">
-            <label>Taux d'épargne visé (%)</label>
-            <input className="input" inputMode="decimal" value={tauxEpargne} onChange={(e) => setTauxEpargne(e.target.value)} />
-          </div>
-        </div>
+      <Onglets
+        label="Rubriques des paramètres"
+        onglets={ONGLETS_PARAMETRES}
+        valeur={onglet}
+        onChange={changerOnglet}
+      />
 
-        <div className="field">
-          <label>Type de revenu (pour les prévisions)</label>
-          <div className="segmented">
-            <button type="button" className={modeRevenu === "fixe" ? "active" : ""} onClick={() => setModeRevenu("fixe")}>
-              Fixe
-            </button>
-            <button type="button" className={modeRevenu === "moyenne" ? "active" : ""} onClick={() => setModeRevenu("moyenne")}>
-              Moyenne réelle
-            </button>
-            <button type="button" className={modeRevenu === "fourchette" ? "active" : ""} onClick={() => setModeRevenu("fourchette")}>
-              Fourchette
-            </button>
-          </div>
-          <span className="muted" style={{ fontSize: 12 }}>
-            {modeRevenu === "fixe" && "Les prévisions utilisent ton revenu mensuel ci-dessus."}
-            {modeRevenu === "moyenne" && "Les prévisions s'appuient sur la moyenne de tes revenus réellement encaissés (6 derniers mois) — idéal si ça varie."}
-            {modeRevenu === "fourchette" && "Définis un revenu prudent et optimiste : les prévisions proposeront des scénarios."}
-          </span>
-        </div>
-
-        {modeRevenu === "fourchette" && (
-          <div className="row">
-            <div className="field">
-              <label>Revenu prudent (bas)</label>
-              <input className="input" inputMode="decimal" value={revenuBas} onChange={(e) => setRevenuBas(e.target.value)} placeholder="ex. 2200" />
+      {onglet === "profil" && (
+        <div className="onglet-panneau" key="profil">
+          {/* Profil */}
+          <div className="card" style={{ marginBottom: 20 }}>
+            <h2>Mon profil</h2>
+            <p className="muted" style={{ fontSize: 13, marginTop: -8 }}>
+              Renseigne ton revenu et ton jour de paie : l'app génère automatiquement ton salaire chaque mois
+              et projette tes prochains mois dans les <strong>Prévisions</strong>.
+            </p>
+            <div className="row">
+              <div className="field">
+                <label>Revenu mensuel net</label>
+                <input
+                  className="input"
+                  inputMode="decimal"
+                  value={revenu}
+                  onChange={(e) => setRevenu(e.target.value)}
+                  placeholder="ex. 2600"
+                />
+              </div>
+              <div className="field">
+                <label>Jour de paie</label>
+                <input
+                  className="input"
+                  type="number"
+                  min={1}
+                  max={31}
+                  value={jourPaie}
+                  onChange={(e) => setJourPaie(e.target.value)}
+                />
+              </div>
             </div>
-            <div className="field">
-              <label>Revenu optimiste (haut)</label>
-              <input className="input" inputMode="decimal" value={revenuHaut} onChange={(e) => setRevenuHaut(e.target.value)} placeholder="ex. 3000" />
-            </div>
-          </div>
-        )}
-
-        <button className="btn primary" onClick={enregistrerProfil}>
-          <Icon name="check" size={16} /> Enregistrer mon profil
-        </button>
-      </div>
-
-      {/* Devise */}
-      <div className="card" style={{ marginBottom: 20 }}>
-        <h2>Devise de l'application</h2>
-        <p className="muted" style={{ fontSize: 13, marginTop: -8 }}>
-          Change la devise d'affichage de tous les montants (soldes, graphiques, rapports).
-          Les valeurs saisies ne sont pas converties, seul le symbole change.
-        </p>
-        <div className="flex" style={{ gap: 12 }}>
-          <select
-            className="select"
-            style={{ maxWidth: 280 }}
-            value={devise}
-            onChange={(e) => e.target.value !== devise && setConvCible(e.target.value)}
-          >
-            {DEVISES.map((d) => (
-              <option key={d.code} value={d.code}>
-                {d.nom}
-              </option>
-            ))}
-          </select>
-          <span className="chip" style={{ background: "var(--brand-grad-soft)", color: "var(--accent)" }}>
-            Aperçu : {formatMontant(1234.5)}
-          </span>
-        </div>
-      </div>
-
-      {/* Catégories */}
-      <div className="card" style={{ marginBottom: 20 }}>
-        <div className="flex-between">
-          <h2 style={{ margin: 0 }}>Catégories</h2>
-          <button className="btn sm primary" onClick={() => setEdit("new")}>
-            <Icon name="plus" size={15} /> Ajouter
-          </button>
-        </div>
-
-        <div className="section-title">Dépenses</div>
-        <CategorieList items={depenses} onEdit={setEdit} />
-        <div className="section-title">Revenus</div>
-        <CategorieList items={revenus} onEdit={setEdit} />
-      </div>
-
-      {/* Règles de catégorisation */}
-      <div className="card" style={{ marginBottom: 20 }}>
-        <div className="flex-between">
-          <h2 style={{ margin: 0 }}>Catégorisation automatique</h2>
-          <button
-            className="btn sm"
-            onClick={async () => {
-              const n = await appliquerReglesExistant();
-              await rafraichir();
-              toast(n > 0 ? `${n} transaction(s) catégorisée(s)` : "Rien à catégoriser");
-            }}
-          >
-            Appliquer aux dépenses sans catégorie
-          </button>
-        </div>
-        <p className="muted" style={{ fontSize: 13, marginTop: 6 }}>
-          Associe un mot-clé à une catégorie : les transactions importées (et les dépenses sans
-          catégorie) sont classées automatiquement. Ex. « netflix » → Abonnements.
-        </p>
-        <div className="flex" style={{ gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
-          <input
-            className="input"
-            style={{ maxWidth: 220 }}
-            placeholder="Mot-clé (ex. carrefour)"
-            value={regleMot}
-            onChange={(e) => setRegleMot(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && ajouterRegle()}
-          />
-          <select
-            className="select"
-            style={{ maxWidth: 200 }}
-            value={regleCat}
-            onChange={(e) => setRegleCat(e.target.value === "" ? "" : Number(e.target.value))}
-          >
-            <option value="">Catégorie…</option>
-            {depenses.map((c) => (
-              <option key={c.id} value={c.id}>{c.nom}</option>
-            ))}
-          </select>
-          <button className="btn primary" onClick={ajouterRegle} disabled={!regleMot.trim() || regleCat === ""}>
-            <Icon name="plus" size={15} /> Ajouter
-          </button>
-        </div>
-        {regles.length === 0 ? (
-          <p className="muted" style={{ fontSize: 13 }}>Aucune règle pour l'instant.</p>
-        ) : (
-          <div className="flex" style={{ flexWrap: "wrap", gap: 8 }}>
-            {regles.map((r) => (
-              <span key={r.id} className="chip" style={{ background: "var(--surface-2)" }}>
-                <strong>{r.motcle}</strong> → {catNom.get(r.categorie_id) ?? "?"}
-                <button
-                  className="icon-btn"
-                  style={{ fontSize: 15, marginLeft: 4 }}
-                  onClick={async () => {
-                    await supprimerRegle(r.id);
-                    await rechargerRegles();
-                  }}
+            <div className="row">
+              <div className="field">
+                <label>Compte principal (versement du salaire)</label>
+                <select
+                  className="select"
+                  value={comptePrincipal}
+                  onChange={(e) => setComptePrincipal(e.target.value === "" ? "" : Number(e.target.value))}
                 >
-                  ×
+                  <option value="">—</option>
+                  {comptes.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.nom}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="field">
+                <label>Taux d'épargne visé (%)</label>
+                <input
+                  className="input"
+                  inputMode="decimal"
+                  value={tauxEpargne}
+                  onChange={(e) => setTauxEpargne(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="field">
+              <label>Type de revenu (pour les prévisions)</label>
+              <div className="segmented">
+                <button
+                  type="button"
+                  className={modeRevenu === "fixe" ? "active" : ""}
+                  onClick={() => setModeRevenu("fixe")}
+                >
+                  Fixe
                 </button>
+                <button
+                  type="button"
+                  className={modeRevenu === "moyenne" ? "active" : ""}
+                  onClick={() => setModeRevenu("moyenne")}
+                >
+                  Moyenne réelle
+                </button>
+                <button
+                  type="button"
+                  className={modeRevenu === "fourchette" ? "active" : ""}
+                  onClick={() => setModeRevenu("fourchette")}
+                >
+                  Fourchette
+                </button>
+              </div>
+              <span className="muted" style={{ fontSize: 12 }}>
+                {modeRevenu === "fixe" && "Les prévisions utilisent ton revenu mensuel ci-dessus."}
+                {modeRevenu === "moyenne" &&
+                  "Les prévisions s'appuient sur la moyenne de tes revenus réellement encaissés (6 derniers mois) — idéal si ça varie."}
+                {modeRevenu === "fourchette" &&
+                  "Définis un revenu prudent et optimiste : les prévisions proposeront des scénarios."}
               </span>
-            ))}
+            </div>
+
+            {modeRevenu === "fourchette" && (
+              <div className="row">
+                <div className="field">
+                  <label>Revenu prudent (bas)</label>
+                  <input
+                    className="input"
+                    inputMode="decimal"
+                    value={revenuBas}
+                    onChange={(e) => setRevenuBas(e.target.value)}
+                    placeholder="ex. 2200"
+                  />
+                </div>
+                <div className="field">
+                  <label>Revenu optimiste (haut)</label>
+                  <input
+                    className="input"
+                    inputMode="decimal"
+                    value={revenuHaut}
+                    onChange={(e) => setRevenuHaut(e.target.value)}
+                    placeholder="ex. 3000"
+                  />
+                </div>
+              </div>
+            )}
+
+            <button className="btn primary" onClick={enregistrerProfil}>
+              <Icon name="check" size={16} /> Enregistrer mon profil
+            </button>
           </div>
-        )}
-      </div>
 
-      {/* Sauvegarde & export */}
-      <div className="grid grid-2">
-        <div className="card">
-          <h2>Sauvegarde</h2>
-          <p className="muted" style={{ fontSize: 13 }}>
-            Toutes tes données (base SQLite + justificatifs PDF) sont stockées
-            localement dans le dossier de données de l'app. Pense à copier ce
-            dossier régulièrement sur un disque externe ou une clé USB.
-          </p>
-          <button
-            className="btn"
-            onClick={async () => {
-              const d = await ouvrirDossierDonnees();
-              toast(`Dossier : ${d}`);
-            }}
-          >
-            <Icon name="folder" size={16} /> Ouvrir le dossier de données
-          </button>
-        </div>
-        <div className="card">
-          <h2>Export CSV</h2>
-          <p className="muted" style={{ fontSize: 13 }}>
-            Exporte toutes tes transactions dans un fichier CSV (compatible Excel /
-            LibreOffice), utile comme sauvegarde de secours lisible.
-          </p>
-          <button className="btn" onClick={exporter}>
-            <Icon name="download" size={16} /> Exporter en CSV
-          </button>
-        </div>
-      </div>
-
-      {/* Sauvegarde & restauration */}
-      <div className="card" style={{ marginTop: 20 }}>
-        <h2>Sauvegarde & restauration de la base</h2>
-        <p className="muted" style={{ fontSize: 13, marginTop: -8 }}>
-          Crée une copie complète et <strong>chiffrée</strong> de ta base (AES-256, clé dans le
-          trousseau Windows) — sûre à copier sur une clé USB ou le cloud. Une sauvegarde
-          automatique est aussi faite une fois par jour (15 dernières conservées). La
-          restauration remplace tes données actuelles par une sauvegarde choisie, au prochain lancement.
-        </p>
-        <div className="flex" style={{ gap: 10, flexWrap: "wrap" }}>
-          <button
-            className="btn primary"
-            onClick={async () => {
-              try {
-                const nom = await creerSauvegarde();
-                toast(`Sauvegarde créée : ${nom}`);
-              } catch {
-                toast("Échec de la sauvegarde");
-              }
-            }}
-          >
-            <Icon name="download" size={16} /> Sauvegarder maintenant
-          </button>
-          <button className="btn" onClick={() => ouvrirDossierSauvegardes()}>
-            <Icon name="folder" size={16} /> Dossier des sauvegardes
-          </button>
-          <button
-            className="btn danger"
-            onClick={async () => {
-              const ok = await preparerRestauration();
-              if (!ok) return;
-              window.alert(
-                "Sauvegarde chargée. L'application va se fermer : rouvre-la pour terminer la restauration. Tes données actuelles seront remplacées."
-              );
-            }}
-          >
-            <Icon name="alert" size={16} /> Restaurer une sauvegarde…
-          </button>
-        </div>
-      </div>
-
-      <SyncMobileCard />
-
-      <div className="card" style={{ marginTop: 20 }}>
-        <h2>Sécurité — code PIN</h2>
-        <p className="muted" style={{ fontSize: 13, marginTop: -8 }}>
-          Protège l'ouverture de l'application par un code PIN de 4 à 6 chiffres, demandé
-          à chaque lancement. Le code est stocké sous forme chiffrée (jamais en clair).
-        </p>
-        {pinDefini ? (
-          <div className="flex" style={{ gap: 10 }}>
-            <span className="chip" style={{ background: "rgba(52,211,153,.15)", color: "var(--green)" }}>
-              <Icon name="lock" size={13} /> PIN activé
-            </span>
-            <button className="btn" onClick={() => setPinMode("create")}>
-              <Icon name="edit" size={15} /> Modifier le code
-            </button>
-            <button className="btn danger" onClick={() => setPinMode("disable")}>
-              <Icon name="trash" size={15} /> Désactiver
-            </button>
-            <div className="flex" style={{ gap: 8, marginLeft: "auto" }}>
-              <span className="muted" style={{ fontSize: 13 }}>Auto-verrouillage</span>
+          {/* Devise */}
+          <div className="card" style={{ marginBottom: 20 }}>
+            <h2>Devise de l'application</h2>
+            <p className="muted" style={{ fontSize: 13, marginTop: -8 }}>
+              Change la devise d'affichage de tous les montants (soldes, graphiques, rapports). Les valeurs
+              saisies ne sont pas converties, seul le symbole change.
+            </p>
+            <div className="flex" style={{ gap: 12 }}>
               <select
                 className="select"
-                style={{ width: 150 }}
-                value={delaiAutoLock}
-                onChange={(e) => setDelaiAutoLock(Number(e.target.value))}
+                style={{ maxWidth: 280 }}
+                value={devise}
+                onChange={(e) => e.target.value !== devise && setConvCible(e.target.value)}
               >
-                <option value={0}>Désactivé</option>
-                <option value={1}>Après 1 min</option>
-                <option value={5}>Après 5 min</option>
-                <option value={15}>Après 15 min</option>
-                <option value={30}>Après 30 min</option>
+                {DEVISES.map((d) => (
+                  <option key={d.code} value={d.code}>
+                    {d.nom}
+                  </option>
+                ))}
               </select>
+              <span className="chip" style={{ background: "var(--brand-grad-soft)", color: "var(--accent)" }}>
+                Aperçu : {formatMontant(1234.5)}
+              </span>
             </div>
           </div>
-        ) : (
-          <button className="btn primary" onClick={() => setPinMode("create")}>
-            <Icon name="lock" size={16} /> Activer le code PIN
-          </button>
-        )}
-        {pinDefini && helloDispo && (
-          <label className="flex" style={{ cursor: "pointer", marginTop: 14 }}>
-            <input
-              type="checkbox"
-              checked={biometrie}
-              onChange={(e) => setBiometrie(e.target.checked)}
-              style={{ width: 16, height: 16 }}
-            />
-            Autoriser le déverrouillage par <strong>Windows Hello</strong> (empreinte / visage / PIN Windows)
-          </label>
-        )}
-        {pinDefini && !helloDispo && (
-          <p className="dim" style={{ fontSize: 12, marginTop: 12 }}>
-            Windows Hello n'est pas disponible ou configuré sur ce PC.
-          </p>
-        )}
-      </div>
-
-      <div className="card" style={{ marginTop: 20 }}>
-        <h2>Démonstration</h2>
-        <p className="muted" style={{ fontSize: 13 }}>
-          Remplis l'app avec ~4 mois de données d'exemple pour visualiser les courbes,
-          rapports et suggestions. À effacer quand tu veux avant de saisir tes vraies données.
-        </p>
-        <div className="flex" style={{ gap: 10 }}>
-          <button className="btn primary" onClick={chargerDemo} disabled={busyDemo}>
-            <Icon name="sparkles" size={16} /> Charger des données de démo
-          </button>
-          <button className="btn danger" onClick={reset} disabled={busyDemo}>
-            <Icon name="trash" size={16} /> Réinitialiser les données
-          </button>
         </div>
-      </div>
+      )}
 
-      <div className="card" style={{ marginTop: 20 }}>
-        <h2>À propos</h2>
-        <p className="muted" style={{ fontSize: 13 }}>
-          Aplomb. Vos données restent sur cet appareil, sans aucune connexion
-          bancaire ; seule l'application iPhone, si vous l'activez, les fait transiter par
-          votre OneDrive, chiffrées de bout en bout. Conseil : évitez de placer le dossier de
-          données de l'app dans un emplacement synchronisé publiquement.
-        </p>
-      </div>
+      {onglet === "categories" && (
+        <div className="onglet-panneau" key="categories">
+          {/* Catégories */}
+          <div className="card" style={{ marginBottom: 20 }}>
+            <div className="flex-between">
+              <h2 style={{ margin: 0 }}>Catégories</h2>
+              <button className="btn sm primary" onClick={() => setEdit("new")}>
+                <Icon name="plus" size={15} /> Ajouter
+              </button>
+            </div>
+
+            <div className="section-title">Dépenses</div>
+            <CategorieList items={depenses} onEdit={setEdit} />
+            <div className="section-title">Revenus</div>
+            <CategorieList items={revenus} onEdit={setEdit} />
+          </div>
+
+          {/* Règles de catégorisation */}
+          <div className="card" style={{ marginBottom: 20 }}>
+            <div className="flex-between">
+              <h2 style={{ margin: 0 }}>Catégorisation automatique</h2>
+              <button
+                className="btn sm"
+                onClick={async () => {
+                  const n = await appliquerReglesExistant();
+                  await rafraichir();
+                  toast(n > 0 ? `${n} transaction(s) catégorisée(s)` : "Rien à catégoriser");
+                }}
+              >
+                Appliquer aux dépenses sans catégorie
+              </button>
+            </div>
+            <p className="muted" style={{ fontSize: 13, marginTop: 6 }}>
+              Associe un mot-clé à une catégorie : les transactions importées (et les dépenses sans catégorie)
+              sont classées automatiquement. Ex. « netflix » → Abonnements.
+            </p>
+            <div className="flex" style={{ gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+              <input
+                className="input"
+                style={{ maxWidth: 220 }}
+                placeholder="Mot-clé (ex. carrefour)"
+                value={regleMot}
+                onChange={(e) => setRegleMot(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && ajouterRegle()}
+              />
+              <select
+                className="select"
+                style={{ maxWidth: 200 }}
+                value={regleCat}
+                onChange={(e) => setRegleCat(e.target.value === "" ? "" : Number(e.target.value))}
+              >
+                <option value="">Catégorie…</option>
+                {depenses.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.nom}
+                  </option>
+                ))}
+              </select>
+              <button
+                className="btn primary"
+                onClick={ajouterRegle}
+                disabled={!regleMot.trim() || regleCat === ""}
+              >
+                <Icon name="plus" size={15} /> Ajouter
+              </button>
+            </div>
+            {regles.length === 0 ? (
+              <p className="muted" style={{ fontSize: 13 }}>
+                Aucune règle pour l'instant.
+              </p>
+            ) : (
+              <div className="flex" style={{ flexWrap: "wrap", gap: 8 }}>
+                {regles.map((r) => (
+                  <span key={r.id} className="chip" style={{ background: "var(--surface-2)" }}>
+                    <strong>{r.motcle}</strong> → {catNom.get(r.categorie_id) ?? "?"}
+                    <button
+                      className="icon-btn"
+                      style={{ fontSize: 15, marginLeft: 4 }}
+                      onClick={async () => {
+                        await supprimerRegle(r.id);
+                        await rechargerRegles();
+                      }}
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {onglet === "donnees" && (
+        <div className="onglet-panneau" key="donnees">
+          {/* Sauvegarde & export */}
+          <div className="grid grid-2">
+            <div className="card">
+              <h2>Sauvegarde</h2>
+              <p className="muted" style={{ fontSize: 13 }}>
+                Toutes tes données (base SQLite + justificatifs PDF) sont stockées localement dans le dossier
+                de données de l'app. Pense à copier ce dossier régulièrement sur un disque externe ou une clé
+                USB.
+              </p>
+              <button
+                className="btn"
+                onClick={async () => {
+                  const d = await ouvrirDossierDonnees();
+                  toast(`Dossier : ${d}`);
+                }}
+              >
+                <Icon name="folder" size={16} /> Ouvrir le dossier de données
+              </button>
+            </div>
+            <div className="card">
+              <h2>Export CSV</h2>
+              <p className="muted" style={{ fontSize: 13 }}>
+                Exporte toutes tes transactions dans un fichier CSV (compatible Excel / LibreOffice), utile
+                comme sauvegarde de secours lisible.
+              </p>
+              <button className="btn" onClick={exporter}>
+                <Icon name="download" size={16} /> Exporter en CSV
+              </button>
+            </div>
+          </div>
+
+          {/* Sauvegarde & restauration */}
+          <div className="card" style={{ marginTop: 20 }}>
+            <h2>Sauvegarde & restauration de la base</h2>
+            <p className="muted" style={{ fontSize: 13, marginTop: -8 }}>
+              Crée une copie complète et <strong>chiffrée</strong> de ta base (AES-256, clé dans le trousseau
+              Windows) — sûre à copier sur une clé USB ou le cloud. Une sauvegarde automatique est aussi faite
+              une fois par jour (15 dernières conservées). La restauration remplace tes données actuelles par
+              une sauvegarde choisie, au prochain lancement.
+            </p>
+            <div className="flex" style={{ gap: 10, flexWrap: "wrap" }}>
+              <button
+                className="btn primary"
+                onClick={async () => {
+                  try {
+                    const nom = await creerSauvegarde();
+                    toast(`Sauvegarde créée : ${nom}`);
+                  } catch {
+                    toast("Échec de la sauvegarde");
+                  }
+                }}
+              >
+                <Icon name="download" size={16} /> Sauvegarder maintenant
+              </button>
+              <button className="btn" onClick={() => ouvrirDossierSauvegardes()}>
+                <Icon name="folder" size={16} /> Dossier des sauvegardes
+              </button>
+              <button
+                className="btn danger"
+                onClick={async () => {
+                  const ok = await preparerRestauration();
+                  if (!ok) return;
+                  window.alert(
+                    "Sauvegarde chargée. L'application va se fermer : rouvre-la pour terminer la restauration. Tes données actuelles seront remplacées.",
+                  );
+                }}
+              >
+                <Icon name="alert" size={16} /> Restaurer une sauvegarde…
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {onglet === "iphone" && (
+        <div className="onglet-panneau" key="iphone">
+          <SyncMobileCard />
+        </div>
+      )}
+
+      {onglet === "securite" && (
+        <div className="onglet-panneau" key="securite">
+          <div className="card" style={{ marginTop: 20 }}>
+            <h2>Sécurité — code PIN</h2>
+            <p className="muted" style={{ fontSize: 13, marginTop: -8 }}>
+              Protège l'ouverture de l'application par un code PIN de 4 à 6 chiffres, demandé à chaque
+              lancement. Le code est stocké sous forme chiffrée (jamais en clair).
+            </p>
+            {pinDefini ? (
+              <div className="flex" style={{ gap: 10 }}>
+                <span className="chip" style={{ background: "rgba(52,211,153,.15)", color: "var(--green)" }}>
+                  <Icon name="lock" size={13} /> PIN activé
+                </span>
+                <button className="btn" onClick={() => setPinMode("create")}>
+                  <Icon name="edit" size={15} /> Modifier le code
+                </button>
+                <button className="btn danger" onClick={() => setPinMode("disable")}>
+                  <Icon name="trash" size={15} /> Désactiver
+                </button>
+                <div className="flex" style={{ gap: 8, marginLeft: "auto" }}>
+                  <span className="muted" style={{ fontSize: 13 }}>
+                    Auto-verrouillage
+                  </span>
+                  <select
+                    className="select"
+                    style={{ width: 150 }}
+                    value={delaiAutoLock}
+                    onChange={(e) => setDelaiAutoLock(Number(e.target.value))}
+                  >
+                    <option value={0}>Désactivé</option>
+                    <option value={1}>Après 1 min</option>
+                    <option value={5}>Après 5 min</option>
+                    <option value={15}>Après 15 min</option>
+                    <option value={30}>Après 30 min</option>
+                  </select>
+                </div>
+              </div>
+            ) : (
+              <button className="btn primary" onClick={() => setPinMode("create")}>
+                <Icon name="lock" size={16} /> Activer le code PIN
+              </button>
+            )}
+            {pinDefini && helloDispo && (
+              <label className="flex" style={{ cursor: "pointer", marginTop: 14 }}>
+                <input
+                  type="checkbox"
+                  checked={biometrie}
+                  onChange={(e) => setBiometrie(e.target.checked)}
+                  style={{ width: 16, height: 16 }}
+                />
+                Autoriser le déverrouillage par <strong>Windows Hello</strong> (empreinte / visage / PIN
+                Windows)
+              </label>
+            )}
+            {pinDefini && !helloDispo && (
+              <p className="dim" style={{ fontSize: 12, marginTop: 12 }}>
+                Windows Hello n'est pas disponible ou configuré sur ce PC.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {onglet === "apropos" && (
+        <div className="onglet-panneau" key="apropos">
+          <div className="card" style={{ marginTop: 20 }}>
+            <h2>Démonstration</h2>
+            <p className="muted" style={{ fontSize: 13 }}>
+              Remplis l'app avec ~4 mois de données d'exemple pour visualiser les courbes, rapports et
+              suggestions. À effacer quand tu veux avant de saisir tes vraies données.
+            </p>
+            <div className="flex" style={{ gap: 10 }}>
+              <button className="btn primary" onClick={chargerDemo} disabled={busyDemo}>
+                <Icon name="sparkles" size={16} /> Charger des données de démo
+              </button>
+              <button className="btn danger" onClick={reset} disabled={busyDemo}>
+                <Icon name="trash" size={16} /> Réinitialiser les données
+              </button>
+            </div>
+          </div>
+
+          <div className="card" style={{ marginTop: 20 }}>
+            <h2>À propos</h2>
+            <p className="muted" style={{ fontSize: 13 }}>
+              Aplomb. Vos données restent sur cet appareil, sans aucune connexion bancaire ; seule
+              l'application iPhone, si vous l'activez, les fait transiter par votre OneDrive, chiffrées de
+              bout en bout. Conseil : évitez de placer le dossier de données de l'app dans un emplacement
+              synchronisé publiquement.
+            </p>
+          </div>
+        </div>
+      )}
 
       <AnimatePresence>
         {edit && (
@@ -495,9 +624,7 @@ export function Parametres() {
       </AnimatePresence>
 
       <AnimatePresence>
-        {pinMode && (
-          <PinModal key="pinMode" mode={pinMode} onClose={() => setPinMode(null)} toast={toast} />
-        )}
+        {pinMode && <PinModal key="pinMode" mode={pinMode} onClose={() => setPinMode(null)} toast={toast} />}
       </AnimatePresence>
 
       <AnimatePresence>
@@ -589,11 +716,13 @@ function ConversionModal({
       }
     >
       <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>
-        Convertir recalcule <strong>tous tes montants</strong> ({base} → {cible}) : soldes,
-        transactions, charges, budgets, objectifs. Sinon, seul le symbole change.
+        Convertir recalcule <strong>tous tes montants</strong> ({base} → {cible}) : soldes, transactions,
+        charges, budgets, objectifs. Sinon, seul le symbole change.
       </p>
       <div className="field">
-        <label>Taux de change (1 {base} = ? {cible})</label>
+        <label>
+          Taux de change (1 {base} = ? {cible})
+        </label>
         <input
           className="input"
           inputMode="decimal"
@@ -713,13 +842,7 @@ function PinModal({
   );
 }
 
-function CategorieList({
-  items,
-  onEdit,
-}: {
-  items: Categorie[];
-  onEdit: (c: Categorie) => void;
-}) {
+function CategorieList({ items, onEdit }: { items: Categorie[]; onEdit: (c: Categorie) => void }) {
   if (items.length === 0) return <p className="muted">Aucune.</p>;
   return (
     <div className="flex" style={{ flexWrap: "wrap", gap: 8 }}>
@@ -791,12 +914,7 @@ function CategorieForm({
     >
       <div className="field">
         <label>Nom</label>
-        <input
-          className="input"
-          value={nom}
-          onChange={(e) => setNom(e.target.value)}
-          autoFocus
-        />
+        <input className="input" value={nom} onChange={(e) => setNom(e.target.value)} autoFocus />
       </div>
       <div className="field">
         <label>Type</label>

@@ -3,11 +3,20 @@ import { useMemo, useState } from "react";
 import { useAppData } from "../state/AppDataContext";
 import { useToast } from "../state/ToastContext";
 import { TransactionModal } from "../components/TransactionModal";
-import { Icon } from "../components/Icon";
-import { pointerTransaction, type TransactionInput } from "../db/repo";
+import { Icon, type IconName } from "../components/Icon";
+import {
+  confirmerTransaction,
+  pointerTransaction,
+  supprimerTransaction,
+  type TransactionInput,
+} from "../db/repo";
+import { Menu, MenuActions, MenuChoix, type EntreeMenu } from "../components/ui/Menu";
+import { SelecteurMois } from "../components/ui/SelecteurMois";
+import { useDemandeNavigation } from "../hooks/useActionDemandee";
+import { ouvrirJustificatif } from "../lib/justificatifs";
 import { soldeCompteAvecInitial } from "../lib/calculs";
 import { scannerRecu } from "../lib/ocr";
-import { formatDate, formatMontant, formatMois } from "../lib/format";
+import { aujourdhui, formatDate, formatMontant } from "../lib/format";
 import { moisDisponibles } from "../lib/calculs";
 import type { Transaction, TxType } from "../db/types";
 
@@ -45,6 +54,124 @@ export function Transactions() {
     }
   }
 
+  /** Nouvelle saisie d'un type donné (ou duplication d'une transaction). */
+  function nouvelle(p?: Partial<TransactionInput>) {
+    setPresets(p);
+    setModal("new");
+  }
+
+  function dupliquer(t: Transaction) {
+    nouvelle({
+      type: t.type,
+      montant: t.montant,
+      description: t.description ?? undefined,
+      compte_id: t.compte_id ?? undefined,
+      compte_dest_id: t.compte_dest_id ?? undefined,
+      categorie_id: t.categorie_id ?? undefined,
+      date: aujourdhui(),
+    } as Partial<TransactionInput>);
+  }
+
+  async function supprimer(t: Transaction) {
+    if (!window.confirm(`Supprimer « ${t.description || LIBELLE_TYPE[t.type]} » du ${formatDate(t.date)} ?`))
+      return;
+    await supprimerTransaction(t.id);
+    await rafraichir();
+    toast("Transaction supprimée");
+  }
+
+  useDemandeNavigation((d) => {
+    if (d.compte !== undefined) setFCompte(String(d.compte));
+    if (d.transaction !== undefined) {
+      const t = transactions.find((x) => x.id === d.transaction);
+      if (t) setModal(t);
+    } else if (d.action === "scanner") void scannerUnRecu();
+    else if (d.action === "depense" || d.action === "revenu" || d.action === "virement") {
+      nouvelle({ type: d.action, compte_id: d.compte } as Partial<TransactionInput>);
+    }
+  });
+
+  const menuNouvelle: EntreeMenu[] = [
+    {
+      id: "depense",
+      label: "Dépense",
+      ico: "trending-down",
+      action: () => nouvelle({ type: "depense" } as Partial<TransactionInput>),
+    },
+    {
+      id: "revenu",
+      label: "Revenu",
+      ico: "trending-up",
+      action: () => nouvelle({ type: "revenu" } as Partial<TransactionInput>),
+    },
+    {
+      id: "virement",
+      label: "Virement",
+      ico: "repeat",
+      description: "Entre deux comptes",
+      action: () => nouvelle({ type: "virement" } as Partial<TransactionInput>),
+    },
+    { separateur: true },
+    {
+      id: "scanner",
+      label: "Scanner un reçu",
+      ico: "camera",
+      description: "Photo ou PDF, champs pré-remplis",
+      desactive: scanEnCours,
+      action: () => void scannerUnRecu(),
+    },
+  ];
+
+  /** Actions d'une ligne (menu ⋯). */
+  function actionsLigne(t: Transaction): EntreeMenu[] {
+    return [
+      { id: "modifier", label: "Modifier", ico: "edit", action: () => setModal(t) },
+      {
+        id: "dupliquer",
+        label: "Dupliquer",
+        ico: "copy",
+        description: "Même saisie, datée d'aujourd'hui",
+        action: () => dupliquer(t),
+      },
+      ...(t.a_confirmer === 1
+        ? [
+            {
+              id: "confirmer",
+              label: "Confirmer",
+              ico: "check" as const,
+              action: async () => {
+                await confirmerTransaction(t.id);
+                await rafraichir();
+                toast("Transaction confirmée");
+              },
+            },
+          ]
+        : []),
+      {
+        id: "pointer",
+        label: t.pointee === 1 ? "Dé-pointer" : "Pointer",
+        ico: "check",
+        description: "Rapprochement avec le relevé",
+        action: async () => {
+          await pointerTransaction(t.id, t.pointee !== 1);
+          await rafraichir();
+        },
+      },
+      ...(t.justificatif_path
+        ? [
+            {
+              id: "justif",
+              label: "Voir le justificatif",
+              ico: "paperclip" as const,
+              action: () => void ouvrirJustificatif(t.justificatif_path!),
+            },
+          ]
+        : []),
+      { separateur: true },
+      { id: "supprimer", label: "Supprimer", ico: "trash", danger: true, action: () => void supprimer(t) },
+    ];
+  }
+
   const [fMois, setFMois] = useState<string>("tous");
   const [fCompte, setFCompte] = useState<string>("tous");
   const [fType, setFType] = useState<string>("tous");
@@ -53,14 +180,8 @@ export function Transactions() {
   const [fMax, setFMax] = useState<string>("");
   const [fPointee, setFPointee] = useState<string>("tous");
 
-  const compteNom = useMemo(
-    () => new Map(comptes.map((c) => [c.id, c.nom])),
-    [comptes]
-  );
-  const catById = useMemo(
-    () => new Map(categories.map((c) => [c.id, c])),
-    [categories]
-  );
+  const compteNom = useMemo(() => new Map(comptes.map((c) => [c.id, c.nom])), [comptes]);
+  const catById = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
   const mois = useMemo(() => moisDisponibles(transactions), [transactions]);
 
   const filtres = useMemo(() => {
@@ -110,96 +231,139 @@ export function Transactions() {
           </div>
         </div>
         <div className="flex" style={{ gap: 10 }}>
-          <button
-            className="btn"
-            onClick={scannerUnRecu}
-            disabled={comptes.length === 0 || scanEnCours}
-            title={comptes.length === 0 ? "Crée d'abord un compte" : "Lire un reçu (photo/scan) et pré-remplir"}
-          >
-            <Icon name="receipt" size={16} /> {scanEnCours ? "Lecture…" : "Scanner un reçu"}
-          </button>
-          <button
-            className="btn primary"
-            onClick={() => { setPresets(undefined); setModal("new"); }}
-            disabled={comptes.length === 0}
-            title={comptes.length === 0 ? "Crée d'abord un compte" : ""}
-          >
-            <Icon name="plus" size={16} /> Nouvelle transaction
-          </button>
+          <Menu
+            label="Nouvelle transaction"
+            aligne="droite"
+            largeur={240}
+            elements={menuNouvelle}
+            declencheur={({ ouvert, ...p }) => (
+              <button
+                type="button"
+                {...p}
+                className="btn primary"
+                disabled={comptes.length === 0}
+                title={comptes.length === 0 ? "Crée d'abord un compte" : ""}
+              >
+                <Icon name="plus" size={16} /> {scanEnCours ? "Lecture du reçu…" : "Nouvelle transaction"}
+                <span
+                  className="choix-chev"
+                  style={{ color: "inherit", transform: ouvert ? "rotate(180deg)" : undefined }}
+                >
+                  <Icon name="chevron-down" size={15} />
+                </span>
+              </button>
+            )}
+          />
         </div>
       </div>
 
       <div className="card" style={{ marginBottom: 16 }}>
-        <div className="flex" style={{ flexWrap: "wrap", gap: 12 }}>
-          <select className="select" style={{ maxWidth: 200 }} value={fMois} onChange={(e) => setFMois(e.target.value)}>
-            <option value="tous">Tous les mois</option>
-            {mois.map((m) => (
-              <option key={m} value={m}>
-                {formatMois(m)}
-              </option>
-            ))}
-          </select>
-          <select className="select" style={{ maxWidth: 200 }} value={fCompte} onChange={(e) => setFCompte(e.target.value)}>
-            <option value="tous">Tous les comptes</option>
-            {comptes.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.nom}
-              </option>
-            ))}
-          </select>
-          <select className="select" style={{ maxWidth: 200 }} value={fType} onChange={(e) => setFType(e.target.value)}>
-            <option value="tous">Tous les types</option>
-            <option value="revenu">Revenus</option>
-            <option value="depense">Dépenses</option>
-            <option value="virement">Virements</option>
-          </select>
-          <select className="select" style={{ maxWidth: 180 }} value={fPointee} onChange={(e) => setFPointee(e.target.value)}>
-            <option value="tous">Pointées & non</option>
-            <option value="oui">Pointées</option>
-            <option value="non">Non pointées</option>
-          </select>
-          <input
-            className="input"
-            style={{ maxWidth: 240 }}
-            placeholder="Rechercher (libellé, catégorie)"
-            value={fTexte}
-            onChange={(e) => setFTexte(e.target.value)}
+        <div className="barre-filtres">
+          <div className="champ-recherche">
+            <Icon name="search" size={16} />
+            <input
+              placeholder="Rechercher (libellé, catégorie)"
+              value={fTexte}
+              onChange={(e) => setFTexte(e.target.value)}
+              aria-label="Rechercher une transaction"
+            />
+          </div>
+          <SelecteurMois valeur={fMois} onChange={setFMois} disponibles={mois} tous="Tous les mois" />
+          <MenuChoix
+            variante="filtre"
+            libelle="Compte"
+            valeur={fCompte}
+            parDefaut="tous"
+            onChange={setFCompte}
+            options={[
+              { value: "tous", label: "Tous" },
+              ...comptes.map((c) => ({
+                value: String(c.id),
+                label: c.nom,
+                ico: (c.type === "epargne" ? "coins" : "wallet") as IconName,
+              })),
+            ]}
           />
-          <input
-            className="input"
-            style={{ maxWidth: 120 }}
-            placeholder="Montant min"
-            inputMode="decimal"
-            value={fMin}
-            onChange={(e) => setFMin(e.target.value)}
+          <MenuChoix
+            variante="filtre"
+            libelle="Type"
+            valeur={fType}
+            parDefaut="tous"
+            onChange={setFType}
+            options={[
+              { value: "tous", label: "Tous" },
+              { value: "depense", label: "Dépenses", ico: "trending-down" },
+              { value: "revenu", label: "Revenus", ico: "trending-up" },
+              { value: "virement", label: "Virements", ico: "repeat" },
+            ]}
           />
-          <input
-            className="input"
-            style={{ maxWidth: 120 }}
-            placeholder="Montant max"
-            inputMode="decimal"
-            value={fMax}
-            onChange={(e) => setFMax(e.target.value)}
+          <MenuChoix
+            variante="filtre"
+            libelle="Pointage"
+            valeur={fPointee}
+            parDefaut="tous"
+            onChange={setFPointee}
+            options={[
+              { value: "tous", label: "Toutes" },
+              { value: "oui", label: "Pointées", ico: "check" },
+              { value: "non", label: "Non pointées" },
+            ]}
           />
-          {(fTexte || fMin || fMax || fMois !== "tous" || fCompte !== "tous" || fType !== "tous" || fPointee !== "tous") && (
+          <div className="champ-montants">
+            <input
+              placeholder="Min €"
+              inputMode="decimal"
+              value={fMin}
+              onChange={(e) => setFMin(e.target.value)}
+              aria-label="Montant minimum"
+            />
+            <span>–</span>
+            <input
+              placeholder="Max €"
+              inputMode="decimal"
+              value={fMax}
+              onChange={(e) => setFMax(e.target.value)}
+              aria-label="Montant maximum"
+            />
+          </div>
+          {(fTexte ||
+            fMin ||
+            fMax ||
+            fMois !== "tous" ||
+            fCompte !== "tous" ||
+            fType !== "tous" ||
+            fPointee !== "tous") && (
             <button
-              className="btn"
+              className="btn sm ghost"
               onClick={() => {
-                setFTexte(""); setFMin(""); setFMax(""); setFMois("tous"); setFCompte("tous"); setFType("tous"); setFPointee("tous");
+                setFTexte("");
+                setFMin("");
+                setFMax("");
+                setFMois("tous");
+                setFCompte("tous");
+                setFType("tous");
+                setFPointee("tous");
               }}
             >
-              Réinitialiser
+              <Icon name="undo" size={14} /> Réinitialiser
             </button>
           )}
         </div>
         {rapprochement && (
           <div className="flex" style={{ gap: 18, marginTop: 12, flexWrap: "wrap", fontSize: 13 }}>
             <span className="muted">Rapprochement :</span>
-            <span>Solde pointé <strong className="num">{formatMontant(rapprochement.soldePointe)}</strong></span>
-            <span>Solde réel <strong className="num">{formatMontant(rapprochement.soldeReel)}</strong></span>
+            <span>
+              Solde pointé <strong className="num">{formatMontant(rapprochement.soldePointe)}</strong>
+            </span>
+            <span>
+              Solde réel <strong className="num">{formatMontant(rapprochement.soldeReel)}</strong>
+            </span>
             <span>
               Écart{" "}
-              <strong className="num" style={{ color: Math.abs(rapprochement.ecart) < 0.005 ? "var(--green)" : "var(--amber)" }}>
+              <strong
+                className="num"
+                style={{ color: Math.abs(rapprochement.ecart) < 0.005 ? "var(--green)" : "var(--amber)" }}
+              >
                 {formatMontant(rapprochement.ecart)}
               </strong>
               {Math.abs(rapprochement.ecart) < 0.005 ? " ✓" : " (non pointé)"}
@@ -214,7 +378,10 @@ export function Transactions() {
             <div className="big">
               <Icon name="card" size={44} strokeWidth={1.5} />
             </div>
-            <p>Aucune transaction. Ajoute ta première saisie — tu peux dater dans le passé pour ressaisir ton historique.</p>
+            <p>
+              Aucune transaction. Ajoute ta première saisie — tu peux dater dans le passé pour ressaisir ton
+              historique.
+            </p>
           </div>
         ) : (
           <div className="table-wrap">
@@ -228,31 +395,37 @@ export function Transactions() {
                   <th>Compte</th>
                   <th>Catégorie</th>
                   <th className="right">Montant</th>
+                  <th style={{ width: 44 }} aria-label="Actions"></th>
                 </tr>
               </thead>
               <tbody>
                 {filtres.map((t) => {
                   const cat = t.categorie_id != null ? catById.get(t.categorie_id) : null;
                   return (
-                    <tr
-                      key={t.id}
-                      style={{ cursor: "pointer" }}
-                      onClick={() => setModal(t)}
-                    >
+                    <tr key={t.id} style={{ cursor: "pointer" }} onClick={() => setModal(t)}>
                       <td onClick={(e) => e.stopPropagation()} style={{ textAlign: "center" }}>
                         <button
                           className="pointage"
-                          title={t.pointee === 1 ? "Pointée — cliquer pour dé-pointer" : "Marquer comme pointée"}
+                          title={
+                            t.pointee === 1 ? "Pointée — cliquer pour dé-pointer" : "Marquer comme pointée"
+                          }
                           aria-pressed={t.pointee === 1}
                           onClick={async () => {
                             await pointerTransaction(t.id, t.pointee !== 1);
                             await rafraichir();
                           }}
                           style={{
-                            width: 18, height: 18, borderRadius: "50%", cursor: "pointer",
-                            border: "2px solid " + (t.pointee === 1 ? "var(--green)" : "var(--border-strong)"),
+                            width: 18,
+                            height: 18,
+                            borderRadius: "50%",
+                            cursor: "pointer",
+                            border:
+                              "2px solid " + (t.pointee === 1 ? "var(--green)" : "var(--border-strong)"),
                             background: t.pointee === 1 ? "var(--green)" : "transparent",
-                            display: "grid", placeItems: "center", color: "#fff", padding: 0,
+                            display: "grid",
+                            placeItems: "center",
+                            color: "#fff",
+                            padding: 0,
                           }}
                         >
                           {t.pointee === 1 && <Icon name="check" size={11} strokeWidth={3} />}
@@ -260,19 +433,22 @@ export function Transactions() {
                       </td>
                       <td>{formatDate(t.date)}</td>
                       <td>
-                        <span className={`badge type-${t.type}`}>
-                          {LIBELLE_TYPE[t.type]}
-                        </span>
+                        <span className={`badge type-${t.type}`}>{LIBELLE_TYPE[t.type]}</span>
                       </td>
                       <td>
                         {t.description || <span className="muted">—</span>}
                         {t.justificatif_path && (
-                          <span title="Justificatif joint" style={{ marginLeft: 6, color: "var(--text-muted)" }}>
+                          <span
+                            title="Justificatif joint"
+                            style={{ marginLeft: 6, color: "var(--text-muted)" }}
+                          >
                             <Icon name="paperclip" size={12} />
                           </span>
                         )}
                         {t.a_confirmer === 1 && (
-                          <span className="badge payee_sans_justif" style={{ marginLeft: 8 }}>à confirmer</span>
+                          <span className="badge payee_sans_justif" style={{ marginLeft: 8 }}>
+                            à confirmer
+                          </span>
                         )}
                       </td>
                       <td>
@@ -280,7 +456,7 @@ export function Transactions() {
                           ? `${compteNom.get(t.compte_id ?? -1) ?? "?"} → ${
                               compteNom.get(t.compte_dest_id ?? -1) ?? "?"
                             }`
-                          : compteNom.get(t.compte_id ?? -1) ?? "—"}
+                          : (compteNom.get(t.compte_id ?? -1) ?? "—")}
                       </td>
                       <td>
                         {cat ? (
@@ -304,12 +480,15 @@ export function Transactions() {
                           (t.type === "revenu"
                             ? "montant-pos"
                             : t.type === "depense"
-                            ? "montant-neg"
-                            : "montant-neutre")
+                              ? "montant-neg"
+                              : "montant-neutre")
                         }
                       >
                         {t.type === "revenu" ? "+ " : t.type === "depense" ? "− " : ""}
                         {formatMontant(t.montant)}
+                      </td>
+                      <td className="right" style={{ padding: "6px 8px" }}>
+                        <MenuActions label="Actions sur la transaction" elements={actionsLigne(t)} />
                       </td>
                     </tr>
                   );
@@ -326,7 +505,10 @@ export function Transactions() {
             key="modal"
             transaction={modal === "new" ? null : modal}
             presets={modal === "new" ? presets : undefined}
-            onClose={() => { setModal(null); setPresets(undefined); }}
+            onClose={() => {
+              setModal(null);
+              setPresets(undefined);
+            }}
             onSaved={async () => {
               setModal(null);
               setPresets(undefined);

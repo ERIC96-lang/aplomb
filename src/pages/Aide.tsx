@@ -1,3 +1,4 @@
+import { MenuChoix } from "../components/ui/Menu";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Icon, type IconName } from "../components/Icon";
@@ -21,6 +22,17 @@ const SECTIONS: Section[] = [
     icone: "sparkles",
     intro: "Trois étapes suffisent pour une vue fidèle de vos finances.",
     items: [
+      {
+        titre: "Se repérer dans les menus",
+        points: [
+          "Le bouton « Nouveau » en haut de la barre latérale ouvre le menu de saisie : dépense, revenu, virement, scan d'un reçu, charge fixe, objectif ou compte.",
+          "« Rechercher » (ou Ctrl+K) trouve une page, une action ou une transaction, sans tenir compte des accents.",
+          "Cliquez sur le titre d'un groupe (Opérations, Planification, Documents) pour le replier ; l'icône en haut à droite réduit la barre aux seules icônes. Ces choix sont mémorisés.",
+          "Le choix du mois se fait partout de la même façon : les flèches ‹ › passent au mois voisin, un clic sur le mois ouvre le calendrier (un point signale les mois qui ont des données).",
+          "Le bouton ⋯ au bout d'une ligne ou d'une carte regroupe ses actions : modifier, dupliquer, pointer, joindre un justificatif, supprimer…",
+          "Paramètres est découpé en rubriques (Profil & devise, Catégories, Données, iPhone, Sécurité, À propos).",
+        ],
+      },
       {
         titre: "1 — Créez vos comptes",
         points: [
@@ -375,11 +387,13 @@ const SECTIONS: Section[] = [
 
 export function Aide() {
   const [q, setQ] = useState("");
+  const [rubrique, setRubrique] = useState("toutes");
 
   const sections = useMemo(() => {
     const terme = q.trim().toLowerCase();
-    if (!terme) return SECTIONS;
-    return SECTIONS.map((s) => ({
+    const base = rubrique === "toutes" ? SECTIONS : SECTIONS.filter((s) => s.id === rubrique);
+    if (!terme) return base;
+    return base.map((s) => ({
       ...s,
       items: s.items.filter(
         (it) =>
@@ -388,9 +402,9 @@ export function Aide() {
           s.titre.toLowerCase().includes(terme)
       ),
     })).filter((s) => s.items.length > 0);
-  }, [q]);
+  }, [q, rubrique]);
 
-  const ouvert = q.trim().length > 0;
+  const ouvert = q.trim().length > 0 || rubrique !== "toutes";
 
   return (
     <>
@@ -401,6 +415,7 @@ export function Aide() {
         </div>
       </div>
 
+      <div className="aide-outils">
       <div className="aide-search">
         <Icon name="help" size={18} />
         <input
@@ -411,10 +426,23 @@ export function Aide() {
           aria-label="Rechercher dans l'aide"
         />
       </div>
+        <MenuChoix
+          variante="filtre"
+          libelle="Rubrique"
+          valeur={rubrique}
+          parDefaut="toutes"
+          onChange={setRubrique}
+          largeur={260}
+          options={[
+            { value: "toutes", label: "Toutes" },
+            ...SECTIONS.map((s) => ({ value: s.id, label: s.titre, ico: s.icone })),
+          ]}
+        />
+      </div>
 
       {sections.length === 0 && (
         <div className="card aide-empty">
-          <p>Aucun résultat pour « {q} ».</p>
+          <p>Aucun résultat pour « {q} »{rubrique !== "toutes" ? " dans cette rubrique" : ""}.</p>
           <p className="muted">Essayez un autre terme, ou parcourez les rubriques ci-dessous en effaçant la recherche.</p>
         </div>
       )}

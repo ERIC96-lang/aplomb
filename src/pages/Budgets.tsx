@@ -2,6 +2,8 @@ import { useMemo, useState } from "react";
 import { addMonths, format } from "date-fns";
 import { useAppData } from "../state/AppDataContext";
 import { useToast } from "../state/ToastContext";
+import { MenuActions } from "../components/ui/Menu";
+import { SelecteurMois } from "../components/ui/SelecteurMois";
 import { Icon } from "../components/Icon";
 import { Defilant } from "../components/Defilant";
 import { definirBudget, supprimerBudget } from "../db/repo";
@@ -97,13 +99,7 @@ export function Budgets() {
               <Icon name="sparkles" size={16} /> Proposer les plafonds
             </button>
           )}
-        <select className="select" style={{ width: 170 }} value={mois} onChange={(e) => setMois(e.target.value)}>
-          {moisList.map((m) => (
-            <option key={m} value={m}>
-              {formatMois(m)}
-            </option>
-          ))}
-        </select>
+        <SelecteurMois valeur={mois} onChange={setMois} disponibles={moisList} />
         </div>
       </div>
 
@@ -238,21 +234,24 @@ function BudgetEditeur({
 
   if (!edit) {
     return (
-      <div className="flex" style={{ gap: 6 }}>
-        <button className="btn sm ghost" onClick={() => setEdit(true)}>
-          <Icon name="edit" size={13} /> Modifier
-        </button>
-        <button
-          className="btn sm ghost"
-          onClick={async () => {
-            await supprimerBudget(categorie_id);
-            await onSaved();
-            toast("Plafond retiré");
-          }}
-        >
-          <Icon name="trash" size={13} />
-        </button>
-      </div>
+      <MenuActions
+        label="Actions sur ce plafond"
+        elements={[
+          { id: "modifier", label: "Modifier le plafond", ico: "edit", action: () => setEdit(true) },
+          { separateur: true },
+          {
+            id: "retirer",
+            label: "Retirer le plafond",
+            ico: "trash",
+            danger: true,
+            action: async () => {
+              await supprimerBudget(categorie_id);
+              await onSaved();
+              toast("Plafond retiré");
+            },
+          },
+        ]}
+      />
     );
   }
 

@@ -1,8 +1,10 @@
+import { Segmente } from "../components/ui/Segmente";
 import { useMemo, useState } from "react";
 import { addMonths, format } from "date-fns";
 import { useAppData } from "../state/AppDataContext";
 import { useToast } from "../state/ToastContext";
 import {
+  moisDisponibles,
   repartitionDepenses,
   repartitionDepensesPeriode,
   soldeGlobal,
@@ -12,6 +14,7 @@ import {
 import { pointsFluxAnnee } from "../lib/series";
 import { CategorieBars, FluxBarChart } from "../components/charts";
 import { Icon } from "../components/Icon";
+import { SelecteurAnnee, SelecteurMois } from "../components/ui/SelecteurMois";
 import { genererRapportPdf } from "../lib/pdf";
 import { aujourdhui, formatDate, formatMontant, formatMois, moisCourant } from "../lib/format";
 
@@ -25,6 +28,7 @@ export function Rapports() {
   const [annee, setAnnee] = useState(new Date().getFullYear());
   const [debut, setDebut] = useState(`${moisCourant()}-01`);
   const [fin, setFin] = useState(aujourdhui());
+  const moisAvecDonnees = useMemo(() => moisDisponibles(transactions), [transactions]);
 
   /** Données consolidées du rapport courant (pour l'export PDF). */
   function donneesRapport() {
@@ -73,16 +77,26 @@ export function Rapports() {
           <div className="sub">Synthèses mensuelles, annuelles ou sur une période, à imprimer ou exporter en PDF</div>
         </div>
         <div className="flex no-print" style={{ gap: 10, flexWrap: "wrap" }}>
-          <div className="segmented">
-            <button className={type === "mensuel" ? "active" : ""} onClick={() => setType("mensuel")}>Mensuel</button>
-            <button className={type === "annuel" ? "active" : ""} onClick={() => setType("annuel")}>Annuel</button>
-            <button className={type === "periode" ? "active" : ""} onClick={() => setType("periode")}>Période</button>
-          </div>
+          <Segmente
+            label="Type de rapport"
+            valeur={type}
+            onChange={setType}
+            options={[
+              { value: "mensuel", label: "Mensuel" },
+              { value: "annuel", label: "Annuel" },
+              { value: "periode", label: "Période" },
+            ]}
+          />
           {type === "mensuel" && (
-            <input className="input" type="month" style={{ width: 160 }} value={mois} onChange={(e) => e.target.value && setMois(e.target.value)} />
+            <SelecteurMois valeur={mois} onChange={setMois} disponibles={moisAvecDonnees} />
           )}
           {type === "annuel" && (
-            <input className="input" type="number" style={{ width: 100 }} value={annee} onChange={(e) => setAnnee(Number(e.target.value))} />
+            <SelecteurAnnee
+              valeur={annee}
+              onChange={setAnnee}
+              min={Math.min(new Date().getFullYear(), ...moisAvecDonnees.map((m) => Number(m.slice(0, 4))))}
+              max={new Date().getFullYear()}
+            />
           )}
           {type === "periode" && (
             <>

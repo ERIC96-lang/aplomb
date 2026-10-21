@@ -7,6 +7,7 @@ import { dateEcheance, statutPaye } from "../lib/echeances";
 import { grouperParMois, prochainesOccurrences } from "../lib/echeancier";
 import { formatDate, formatMois, formatMontant, moisCourant, aujourdhui } from "../lib/format";
 import type { ChargeFixe, Echeance } from "../db/types";
+import { Segmente } from "../components/ui/Segmente";
 
 const LIB_PERIODE: Record<string, string> = {
   mensuelle: "Mensuelle",
@@ -80,13 +81,12 @@ export function Echeancier() {
           <h1>Échéancier prévisionnel</h1>
           <div className="sub">Sorties d'argent à venir et génération des transactions dues</div>
         </div>
-        <div className="segmented">
-          {[3, 6, 12].map((h) => (
-            <button key={h} className={horizon === h ? "active" : ""} onClick={() => setHorizon(h)}>
-              {h} mois
-            </button>
-          ))}
-        </div>
+        <Segmente
+          label="Horizon"
+          valeur={horizon}
+          onChange={setHorizon}
+          options={[3, 6, 12].map((h) => ({ value: h, label: `${h} mois` }))}
+        />
       </div>
 
       {/* À générer */}

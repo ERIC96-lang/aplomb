@@ -1,3 +1,4 @@
+import { MenuActions } from "../components/ui/Menu";
 import { useEffect, useMemo, useState } from "react";
 import { useToast } from "../state/ToastContext";
 import { Icon } from "../components/Icon";
@@ -5,6 +6,7 @@ import { creerFacture, listFactures, supprimerFacture } from "../db/repo";
 import { genererFacturePdf, ligneVide, totalFacture } from "../lib/pdf";
 import { aujourdhui, formatDate, formatMontant } from "../lib/format";
 import type { Facture, FactureData, FactureType, LigneFacture } from "../db/types";
+import { Segmente } from "../components/ui/Segmente";
 
 const CLE_EMETTEUR = "facture_emetteur";
 
@@ -25,14 +27,15 @@ export function Factures() {
           <h1>Factures & reçus</h1>
           <div className="sub">Génère des documents PDF professionnels, à télécharger au besoin</div>
         </div>
-        <div className="segmented">
-          <button className={onglet === "nouvelle" ? "active" : ""} onClick={() => setOnglet("nouvelle")}>
-            Nouveau
-          </button>
-          <button className={onglet === "historique" ? "active" : ""} onClick={() => setOnglet("historique")}>
-            Historique ({factures.length})
-          </button>
-        </div>
+        <Segmente
+          label="Vue"
+          valeur={onglet}
+          onChange={setOnglet}
+          options={[
+            { value: "nouvelle", label: "Nouveau", ico: "plus" },
+            { value: "historique", label: "Historique", ico: "folder", compte: factures.length },
+          ]}
+        />
       </div>
 
       {onglet === "nouvelle" ? (
@@ -305,16 +308,25 @@ function Historique({
                     <button className="btn sm" onClick={() => retelecharger(f)}>
                       <Icon name="download" size={13} /> PDF
                     </button>
-                    <button
-                      className="btn sm ghost"
-                      onClick={async () => {
-                        await supprimerFacture(f.id);
-                        onChange();
-                        toast("Document supprimé");
-                      }}
-                    >
-                      <Icon name="trash" size={13} />
-                    </button>
+                    <MenuActions
+                      label="Actions sur le document"
+                      elements={[
+                        { id: "pdf", label: "Télécharger le PDF", ico: "download", action: () => void retelecharger(f) },
+                        { separateur: true },
+                        {
+                          id: "supprimer",
+                          label: "Supprimer",
+                          ico: "trash",
+                          danger: true,
+                          action: async () => {
+                            if (!window.confirm("Supprimer ce document de l'historique ?")) return;
+                            await supprimerFacture(f.id);
+                            onChange();
+                            toast("Document supprimé");
+                          },
+                        },
+                      ]}
+                    />
                   </div>
                 </td>
               </tr>

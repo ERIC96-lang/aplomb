@@ -1,3 +1,4 @@
+import { Segmente } from "../components/ui/Segmente";
 import { AnimatePresence } from "motion/react";
 import { useMemo, useState, type ReactNode } from "react";
 import { addMonths, format } from "date-fns";
@@ -25,7 +26,9 @@ import { planDuMois } from "../lib/planMois";
 import { lireProfil } from "../lib/profil";
 import { genererInsights } from "../lib/insights";
 import { InsightRow } from "../components/Insights";
-import { Icon } from "../components/Icon";
+import { Icon, type IconName } from "../components/Icon";
+import { MenuChoix } from "../components/ui/Menu";
+import { SelecteurMois } from "../components/ui/SelecteurMois";
 import { Link } from "react-router-dom";
 import {
   depensesParJour,
@@ -276,14 +279,15 @@ export function Dashboard() {
         <div className="card">
           <div className="flex-between" style={{ marginBottom: 12 }}>
             <h2 style={{ margin: 0 }}>Évolution du solde</h2>
-            <div className="segmented">
-              <button className={courbe === "mois" ? "active" : ""} onClick={() => setCourbe("mois")}>
-                12 mois
-              </button>
-              <button className={courbe === "jour" ? "active" : ""} onClick={() => setCourbe("jour")}>
-                Ce mois
-              </button>
-            </div>
+            <Segmente
+              label="Période de la courbe"
+              valeur={courbe}
+              onChange={setCourbe}
+              options={[
+                { value: "mois", label: "12 mois" },
+                { value: "jour", label: "Ce mois" },
+              ]}
+            />
           </div>
           <SoldeAreaChart data={serieSolde} />
         </div>
@@ -453,27 +457,17 @@ export function Dashboard() {
           <div className="sub">{formatMois(mois)} · {compteSel === undefined ? "tous les comptes" : comptes.find((c) => c.id === compteSel)?.nom}</div>
         </div>
         <div className="flex" style={{ gap: 10 }}>
-          <select
-            className="select"
-            style={{ width: 170 }}
-            aria-label="Filtrer par compte"
-            value={compteId}
-            onChange={(e) => setCompteId(e.target.value === "global" ? "global" : Number(e.target.value))}
-          >
-            <option value="global">Vue globale</option>
-            {comptes.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.nom}
-              </option>
-            ))}
-          </select>
-          <select className="select" style={{ width: 160 }} aria-label="Choisir le mois" value={mois} onChange={(e) => setMois(e.target.value)}>
-            {moisList.map((m) => (
-              <option key={m} value={m}>
-                {formatMois(m)}
-              </option>
-            ))}
-          </select>
+          <MenuChoix
+            libelle="Compte"
+            ico="bank"
+            valeur={compteId}
+            onChange={setCompteId}
+            options={[
+              { value: "global" as const, label: "Vue globale", ico: "dashboard", description: "Tous les comptes" },
+              ...comptes.map((c) => ({ value: c.id, label: c.nom, ico: (c.type === "epargne" ? "coins" : "wallet") as IconName })),
+            ]}
+          />
+          <SelecteurMois valeur={mois} onChange={setMois} disponibles={moisList} />
           <button className="btn" onClick={() => setPerso(true)} title="Personnaliser le tableau de bord">
             <Icon name="settings" size={16} /> Personnaliser
           </button>
