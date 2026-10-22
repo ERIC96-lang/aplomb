@@ -18,11 +18,15 @@ export function Modal({ titre, onClose, children, footer }: ModalProps) {
     // Mémorise l'élément focalisé pour le restaurer à la fermeture.
     const precedent = document.activeElement as HTMLElement | null;
 
-    // Focus initial : premier champ/bouton focusable, sinon la boîte elle-même.
+    // Focus initial : premier champ de saisie, sinon premier bouton du contenu (pas
+    // la croix de fermeture),
+    // sinon la boîte elle-même.
     const boite = ref.current;
-    const focusable = boite?.querySelector<HTMLElement>(
-      'input, select, textarea, button, [href], [tabindex]:not([tabindex="-1"])'
-    );
+    const selecteur = 'input, select, textarea, button, [href], [tabindex]:not([tabindex="-1"])';
+    const focusable =
+      boite?.querySelector<HTMLElement>('.modal-body :is(input:not([type=checkbox]):not([type=radio]), select, textarea)') ??
+      boite?.querySelector<HTMLElement>(`.modal-body :is(${selecteur})`) ??
+      boite?.querySelector<HTMLElement>(selecteur);
     (focusable ?? boite)?.focus();
 
     function onKey(e: KeyboardEvent) {

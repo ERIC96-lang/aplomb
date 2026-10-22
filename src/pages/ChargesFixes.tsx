@@ -268,11 +268,11 @@ export function ChargesFixes() {
                     <td className="right">{formatMontant(c.montant_attendu)}</td>
                     <td>
                       {c.actif ? (
-                        <span className="chip" style={{ background: "#ecfdf5", color: "#059669" }}>
+                        <span className="chip etat-actif">
                           Active
                         </span>
                       ) : (
-                        <span className="chip" style={{ background: "#f1f5f9", color: "#64748b" }}>
+                        <span className="chip etat-inactif">
                           Inactive
                         </span>
                       )}

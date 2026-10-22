@@ -738,6 +738,20 @@ table.data td.left {
   background: rgba(52, 211, 153, 0.15);
   color: var(--green);
 }
+/* Puces d'état, lisibles dans les deux thèmes. */
+.chip.etat-actif {
+  background: color-mix(in srgb, var(--green) 14%, transparent);
+  color: var(--green);
+}
+.chip.etat-inactif {
+  background: var(--surface-2);
+  color: var(--text-muted);
+}
+.chip.etat-info {
+  background: var(--brand-grad-soft);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
 .badge.type-revenu {
   background: rgba(52, 211, 153, 0.15);
   color: var(--green);
@@ -782,7 +796,7 @@ textarea.input {
 .select:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(109, 107, 245, 0.22);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
 }
 .select option {
   background: var(--surface-2);
@@ -823,6 +837,10 @@ textarea.input {
 }
 .segmented button.active {
   color: var(--accent-contrast);
+}
+/* Garde-fou : un sélecteur sans pastille animée garde un fond lisible. */
+.segmented button.active:not(:has(.seg-pill)) {
+  background: var(--accent);
 }
 /* La pastille glisse d'une option à l'autre (motion layoutId). */
 .seg-pill {
@@ -1694,7 +1712,7 @@ table.data tbody tr:nth-child(n + 9) { animation-delay: 0.24s; }
   display: grid;
   place-items: center;
   background:
-    radial-gradient(900px 500px at 50% -10%, rgba(109, 107, 245, 0.18), transparent 60%),
+    radial-gradient(900px 500px at 50% -10%, color-mix(in srgb, var(--accent) 9%, transparent), transparent 60%),
     linear-gradient(180deg, var(--bg-grad-1), var(--bg-grad-2));
 }
 .lock-card {

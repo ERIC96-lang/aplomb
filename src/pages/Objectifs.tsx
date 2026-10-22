@@ -193,7 +193,7 @@ function ObjectifCard({
         />
       </div>
 
-      <div className="num" style={{ fontSize: 24, fontWeight: 750, margin: "10px 0 2px", color: o.couleur }}>
+      <div className="num" style={{ fontSize: 24, fontWeight: 750, margin: "10px 0 2px", color: `color-mix(in srgb, ${o.couleur} 70%, var(--text))` }}>
         <Defilant valeur={montantActuel} />
         <span className="muted" style={{ fontSize: 15, fontWeight: 500 }}> / {formatMontant(o.montant_cible)}</span>
       </div>

@@ -1,3 +1,4 @@
+import { Segmente } from "./ui/Segmente";
 import { useEffect, useMemo, useState } from "react";
 import { Modal } from "./Modal";
 import { useAppData } from "../state/AppDataContext";
@@ -226,18 +227,12 @@ export function TransactionModal({
       {!lockType && (
         <div className="field">
           <label>Type</label>
-          <div className="segmented">
-            {TYPES.map((t) => (
-              <button
-                key={t.value}
-                className={type === t.value ? "active" : ""}
-                onClick={() => setType(t.value)}
-                type="button"
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
+          <Segmente
+            label="Type de transaction"
+            valeur={type}
+            onChange={setType}
+            options={TYPES.map((t) => ({ value: t.value, label: t.label }))}
+          />
         </div>
       )}
 
@@ -387,7 +382,8 @@ export function TransactionModal({
         </div>
       )}
 
-      {erreur && (
+      {/* Pas de message tant que rien n'est saisi : le bouton reste simplement inactif. */}
+      {erreur && montant.trim() !== "" && (
         <div style={{ color: "var(--red)", fontSize: 13, fontWeight: 600 }}>{erreur}</div>
       )}
 

@@ -1,3 +1,4 @@
+import { Segmente } from "../components/ui/Segmente";
 import { useSearchParams } from "react-router-dom";
 import { Onglets, type Onglet } from "../components/ui/Segmente";
 import { AnimatePresence } from "motion/react";
@@ -244,29 +245,16 @@ export function Parametres() {
 
             <div className="field">
               <label>Type de revenu (pour les prévisions)</label>
-              <div className="segmented">
-                <button
-                  type="button"
-                  className={modeRevenu === "fixe" ? "active" : ""}
-                  onClick={() => setModeRevenu("fixe")}
-                >
-                  Fixe
-                </button>
-                <button
-                  type="button"
-                  className={modeRevenu === "moyenne" ? "active" : ""}
-                  onClick={() => setModeRevenu("moyenne")}
-                >
-                  Moyenne réelle
-                </button>
-                <button
-                  type="button"
-                  className={modeRevenu === "fourchette" ? "active" : ""}
-                  onClick={() => setModeRevenu("fourchette")}
-                >
-                  Fourchette
-                </button>
-              </div>
+              <Segmente
+                label="Type de revenu"
+                valeur={modeRevenu}
+                onChange={setModeRevenu}
+                options={[
+                  { value: "fixe", label: "Fixe" },
+                  { value: "moyenne", label: "Moyenne réelle" },
+                  { value: "fourchette", label: "Fourchette" },
+                ]}
+              />
               <span className="muted" style={{ fontSize: 12 }}>
                 {modeRevenu === "fixe" && "Les prévisions utilisent ton revenu mensuel ci-dessus."}
                 {modeRevenu === "moyenne" &&
@@ -918,22 +906,15 @@ function CategorieForm({
       </div>
       <div className="field">
         <label>Type</label>
-        <div className="segmented">
-          <button
-            type="button"
-            className={type === "depense" ? "active" : ""}
-            onClick={() => setType("depense")}
-          >
-            Dépense
-          </button>
-          <button
-            type="button"
-            className={type === "revenu" ? "active" : ""}
-            onClick={() => setType("revenu")}
-          >
-            Revenu
-          </button>
-        </div>
+        <Segmente
+          label="Type de catégorie"
+          valeur={type}
+          onChange={setType}
+          options={[
+            { value: "depense", label: "Dépense" },
+            { value: "revenu", label: "Revenu" },
+          ]}
+        />
       </div>
       <div className="field">
         <label>Couleur</label>

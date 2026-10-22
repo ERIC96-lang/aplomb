@@ -120,7 +120,7 @@ export function Suggestions() {
               <div className="card" key={c.signature}>
                 <div className="flex-between">
                   <div style={{ fontWeight: 700, fontSize: 16 }}>{c.libelle}</div>
-                  <span className="chip" style={{ background: "#eef2ff", color: "#4f46e5" }}>
+                  <span className="chip etat-info">
                     {c.nb_occurrences}× détectée
                   </span>
                 </div>

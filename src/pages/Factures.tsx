@@ -128,14 +128,15 @@ function Generateur({
         <div className="row">
           <div className="field">
             <label>Type de document</label>
-            <div className="segmented">
-              <button className={type === "facture" ? "active" : ""} onClick={() => setType("facture")}>
-                Facture
-              </button>
-              <button className={type === "recu" ? "active" : ""} onClick={() => setType("recu")}>
-                Reçu
-              </button>
-            </div>
+            <Segmente
+              label="Type de document"
+              valeur={type}
+              onChange={setType}
+              options={[
+                { value: "facture", label: "Facture" },
+                { value: "recu", label: "Reçu" },
+              ]}
+            />
           </div>
           <div className="field">
             <label>Numéro</label>
