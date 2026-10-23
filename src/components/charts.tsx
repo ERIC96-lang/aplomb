@@ -14,7 +14,6 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { motion } from "motion/react";
 import { useTheme } from "../state/ThemeContext";
 import { formatMontant } from "../lib/format";
 import { Defilant } from "./Defilant";
@@ -229,84 +228,6 @@ export function CategorieBars({ data }: { data: PartCategorie[] }) {
           </div>
         </div>
       ))}
-    </div>
-  );
-}
-
-/* ---------------- Jauge (reste à vivre / progression) ---------------- */
-export function Gauge({
-  ratio,
-  centerLabel,
-  centerValue,
-}: {
-  ratio: number; // 0..1
-  centerLabel: string;
-  centerValue: string;
-}) {
-  const c = useChartColors();
-  const clamped = Math.max(0, Math.min(1, ratio));
-  const r = 80;
-  const circ = Math.PI * r; // demi-cercle
-  const offset = circ * (1 - clamped);
-  return (
-    <div style={{ position: "relative", width: "100%", maxWidth: 240, margin: "0 auto" }}>
-      <svg viewBox="0 0 200 110" width="100%">
-        <defs>
-          <linearGradient id="gaugeGrad" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor={c.accent} />
-            <stop offset="100%" stopColor={c.teal} />
-          </linearGradient>
-        </defs>
-        <path className="gauge-track" d="M 20 100 A 80 80 0 0 1 180 100" strokeWidth={14} />
-        <motion.path
-          className="gauge-fill"
-          d="M 20 100 A 80 80 0 0 1 180 100"
-          strokeWidth={14}
-          strokeDasharray={circ}
-          initial={{ strokeDashoffset: circ }}
-          animate={{ strokeDashoffset: offset }}
-          transition={{ type: "spring", stiffness: 70, damping: 16, delay: 0.15 }}
-        />
-      </svg>
-      <div
-        style={{
-          position: "absolute",
-          bottom: 4,
-          left: 0,
-          right: 0,
-          textAlign: "center",
-        }}
-      >
-        <div className="num" style={{ fontSize: 22, fontWeight: 750 }}>
-          {centerValue}
-        </div>
-        <div style={{ fontSize: 11.5, color: "var(--text-muted)" }}>{centerLabel}</div>
-      </div>
-    </div>
-  );
-}
-
-/* ---------------- Heatmap façon calendrier ---------------- */
-export function Heatmap({ data }: { data: number[] }) {
-  const c = useChartColors();
-  const max = Math.max(1, ...data);
-  return (
-    <div className="heatmap">
-      {data.map((v, i) => {
-        const intensity = v / max;
-        const bg =
-          v === 0
-            ? "var(--surface-2)"
-            : `color-mix(in srgb, ${c.accent} ${Math.round(20 + intensity * 80)}%, transparent)`;
-        return (
-          <div
-            key={i}
-            className="heat-cell"
-            style={{ background: bg, animationDelay: `${i * 14}ms` }}
-            title={`Jour ${i + 1} : ${formatMontant(v)}`}
-          />
-        );
-      })}
     </div>
   );
 }

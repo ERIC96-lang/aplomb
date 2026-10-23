@@ -149,7 +149,7 @@ const SECTIONS: Section[] = [
         titre: "Rappels d'échéances",
         points: [
           "Les échéances proches ou en retard sont signalées par une pastille sur « Charges fixes » dans le menu.",
-          "Elles figurent aussi dans la carte « Plan du mois » du tableau de bord.",
+          "Elles figurent aussi sur le tableau de bord : dans « À faire », dans « Prochaines échéances » et sur le fil du mois.",
         ],
       },
       {
@@ -301,9 +301,19 @@ const SECTIONS: Section[] = [
     icone: "settings",
     items: [
       {
+        titre: "Lire le tableau de bord",
+        points: [
+          "En tête, votre solde du jour et un statut : « D'aplomb », « À surveiller » (charge en retard, budget dépassé) ou « Hors d'aplomb » (fin de mois projetée négative). À droite, le calcul de la fin de mois projetée.",
+          "Le fil du mois place la paie et chaque charge fixe à sa date : vert = payée, cercle vide = à venir, rouge = en retard. Le trait vertical marque aujourd'hui. Survolez un point pour le détail.",
+          "Les quatre indicateurs (revenus, dépenses, épargne, budgets) comparent au mois précédent ; la petite courbe montre les 6 derniers mois.",
+          "Sur un mois passé, l'en-tête devient le bilan du mois (revenus, dépenses, épargne).",
+          "Cliquez sur une opération récente pour l'ouvrir directement.",
+        ],
+      },
+      {
         titre: "Tableau de bord sur mesure",
         points: [
-          "Le bouton « Personnaliser » du tableau de bord permet de masquer, afficher et réordonner les sections.",
+          "Le bouton réglages (à droite du choix du mois) permet de masquer, afficher et réordonner les sections.",
         ],
       },
       {

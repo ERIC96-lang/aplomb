@@ -3,16 +3,7 @@
  * sections, persistés en localStorage (par appareil, comme le thème/la devise).
  */
 
-export type SectionId =
-  | "planmois"
-  | "stats"
-  | "insights"
-  | "solde"
-  | "flux"
-  | "patrimoine"
-  | "budgets"
-  | "repartition"
-  | "projection";
+export type SectionId = "apercu" | "indicateurs" | "evolution" | "repartition" | "suivi";
 
 export interface SectionMeta {
   id: SectionId;
@@ -21,15 +12,11 @@ export interface SectionMeta {
 
 /** Ordre par défaut + libellés lisibles (source de vérité de la liste des sections). */
 export const SECTIONS: SectionMeta[] = [
-  { id: "planmois", label: "Plan du mois (assistant)" },
-  { id: "stats", label: "Chiffres clés (solde, revenus, dépenses, reste à vivre)" },
-  { id: "insights", label: "Points clés (analyse)" },
-  { id: "solde", label: "Évolution du solde + taux d'épargne" },
-  { id: "flux", label: "Revenus / dépenses / épargne (6 mois)" },
-  { id: "patrimoine", label: "Patrimoine total" },
-  { id: "budgets", label: "Budgets du mois" },
-  { id: "repartition", label: "Répartition des dépenses" },
-  { id: "projection", label: "Projection, intensité & charges" },
+  { id: "apercu", label: "Aperçu du mois (solde, statut, fil du mois)" },
+  { id: "indicateurs", label: "Indicateurs (revenus, dépenses, épargne, budgets)" },
+  { id: "evolution", label: "Évolution + à faire et prochaines échéances" },
+  { id: "repartition", label: "Dépenses par catégorie + budgets" },
+  { id: "suivi", label: "Points clés + dernières opérations" },
 ];
 
 export interface DashboardPrefs {
