@@ -1,4 +1,5 @@
 import { useEffect, type ReactNode } from "react";
+import { motion } from "motion/react";
 import { Icon, type IconName } from "../../src/components/Icon";
 import { useEtat } from "./etat";
 import { useCountUp } from "../../src/hooks/useCountUp";
@@ -132,5 +133,34 @@ export function PuceSync({ onReglages }: { onReglages: () => void }) {
       )}
       {texte}
     </button>
+  );
+}
+
+/** Anneau de progression (objectifs) : se remplit à l'affichage, pourcentage au centre. */
+export function Anneau({ ratio, couleur, taille = 64 }: { ratio: number; couleur: string; taille?: number }) {
+  const r = taille / 2 - 5;
+  const c = 2 * Math.PI * r;
+  const p = Math.min(1, Math.max(0, ratio));
+  return (
+    <div className="m-anneau" style={{ width: taille, height: taille }}>
+      <svg viewBox={`0 0 ${taille} ${taille}`} width={taille} height={taille} aria-hidden="true">
+        <circle cx={taille / 2} cy={taille / 2} r={r} className="m-anneau-fond" />
+        <motion.circle
+          cx={taille / 2}
+          cy={taille / 2}
+          r={r}
+          fill="none"
+          stroke={couleur}
+          strokeWidth={6}
+          strokeLinecap="round"
+          strokeDasharray={c}
+          transform={`rotate(-90 ${taille / 2} ${taille / 2})`}
+          initial={{ strokeDashoffset: c }}
+          animate={{ strokeDashoffset: c * (1 - p) }}
+          transition={{ type: "spring", stiffness: 60, damping: 15, delay: 0.3 }}
+        />
+      </svg>
+      <span>{Math.round(p * 100)}%</span>
+    </div>
   );
 }

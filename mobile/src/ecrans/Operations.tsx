@@ -2,7 +2,9 @@ import { useMemo, useState } from "react";
 import { format, isToday, isYesterday, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Icon } from "../../../src/components/Icon";
-import { formatMontant } from "../../../src/lib/format";
+import { formatMois, formatMontant, moisCourant } from "../../../src/lib/format";
+import { totauxMois } from "../../../src/lib/calculs";
+import { Indicateurs, Kpi } from "../../../src/components/ui/Page";
 import { useToast } from "../../../src/state/ToastContext";
 import { estEnAttente } from "../../../src/sync/fusion";
 import { uuidDepuisOrigine } from "../../../src/sync/protocole";
@@ -56,6 +58,8 @@ export function Operations({ onReglages }: { onReglages: () => void }) {
     return g;
   }, [filtrees, limite]);
 
+  const moisEnCours = useMemo(() => totauxMois(transactions, moisCourant()), [transactions]);
+
   async function toucher(t: Transaction) {
     if (!estEnAttente(t)) return;
     const uuid = uuidDepuisOrigine(t.auto_origine);
@@ -74,6 +78,10 @@ export function Operations({ onReglages }: { onReglages: () => void }) {
     <>
       <Entete titre="Opérations" droite={inst && <PuceSync onReglages={onReglages} />} />
       <div className="m-page">
+        <Indicateurs>
+          <Kpi label="Entrées" ico="trending-up" montant={moisEnCours.revenus} ton="pos" sous={formatMois(moisCourant())} />
+          <Kpi label="Sorties" ico="trending-down" montant={moisEnCours.depenses} ton="neg" sous={formatMois(moisCourant())} />
+        </Indicateurs>
         <label className="m-recherche">
           <Icon name="search" size={16} />
           <input
@@ -95,7 +103,21 @@ export function Operations({ onReglages }: { onReglages: () => void }) {
           <div>
             {groupes.map((g) => (
               <div key={g.date}>
-                <div className="m-jour">{libelleJour(g.date)}</div>
+                <div className="m-jour">
+                  <span>{libelleJour(g.date)}</span>
+                  {(() => {
+                    const net = g.lignes.reduce(
+                      (a, t) => a + (t.type === "revenu" ? t.montant : t.type === "depense" ? -t.montant : 0),
+                      0
+                    );
+                    return (
+                      <span className={`num ${net > 0 ? "pos" : ""}`}>
+                        {net > 0 ? "+ " : net < 0 ? "− " : ""}
+                        {formatMontant(Math.abs(net))}
+                      </span>
+                    );
+                  })()}
+                </div>
                 <div className="m-carte m-liste-carte">
                   {g.lignes.map((t) => {
                     const cat = t.categorie_id != null ? categories.get(t.categorie_id) : undefined;

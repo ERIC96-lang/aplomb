@@ -1164,3 +1164,233 @@ span.m-touche.vide {
     transition-duration: 0.001ms !important;
   }
 }
+
+/* ==========================================================================
+   Langage « Le fil du mois » sur iPhone : les briques du PC, à l'échelle
+   d'un téléphone (bandeau, fil, indicateurs, rythme des budgets).
+   ========================================================================== */
+.m-page .db-hero {
+  padding: 20px 18px 16px;
+  border-radius: 22px;
+}
+.m-page .db-hero-haut {
+  gap: 16px;
+}
+.m-page .db-hero-montant {
+  font-size: 36px;
+  margin: 4px 0 10px;
+}
+.m-page .db-hero-phrase {
+  font-size: 13px;
+}
+.m-page .db-hero-calcul {
+  padding: 12px 14px;
+  border-radius: 16px;
+}
+.m-page .db-calcul-total strong {
+  font-size: 19px;
+}
+.m-page .fil {
+  margin-top: 18px;
+}
+.m-page .fil-legende {
+  font-size: 11px;
+  gap: 4px 14px;
+}
+/* Au toucher, un point du fil affiche son détail. */
+.m-page .fil-point:focus {
+  z-index: 3;
+}
+.m-page .fil-point:focus .fil-bulle {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+.m-page .fil-point.bord-droit:focus .fil-bulle,
+.m-page .fil-point.bord-gauche:focus .fil-bulle {
+  transform: none;
+}
+.m-maj {
+  margin: -6px 4px 0;
+  font-size: 12px;
+  color: var(--text-dim);
+  text-align: center;
+}
+
+/* Indicateurs : grille 2 × 2 compacte. */
+.m-page .db-kpis {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.m-page .db-kpi {
+  padding: 14px 14px 12px;
+  border-radius: 18px;
+}
+.m-page .db-kpi:hover {
+  transform: none;
+}
+.m-page .db-kpi-tete {
+  font-size: 10.5px;
+}
+.m-page .db-kpi-ico {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+}
+.m-page .db-kpi-valeur {
+  font-size: 19px;
+  margin: 6px 0 0;
+  white-space: nowrap;
+}
+.m-page .db-spark {
+  height: 26px;
+  margin: 6px 0;
+}
+.m-page .db-kpi-pied {
+  font-size: 11px;
+  gap: 6px;
+}
+.m-page .db-kpi-barre {
+  margin: 12px 0 10px;
+}
+.m-kpi-bouton {
+  display: flex;
+  outline: none;
+}
+.m-kpi-bouton > .db-kpi {
+  flex: 1;
+  min-width: 0;
+}
+.m-kpi-bouton:active > .db-kpi {
+  transform: scale(0.98);
+}
+
+/* À faire, échéances : les lignes du PC, en boutons tactiles. */
+.m-page .db-action {
+  width: 100%;
+  font: inherit;
+  font-size: 13.5px;
+  text-align: left;
+  min-height: 46px;
+}
+.m-page .db-action:disabled {
+  cursor: default;
+}
+.m-page .db-action:active:not(:disabled) {
+  transform: scale(0.98);
+}
+.m-page .db-sous-titre {
+  margin: 18px 0 4px;
+}
+.m-page .db-echeances li {
+  grid-template-columns: 58px minmax(0, 1fr) auto;
+  font-size: 14px;
+}
+.m-pile {
+  margin: 0 0 6px;
+}
+
+/* Objectifs en anneaux. */
+.m-objectifs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 10px;
+}
+.m-objectif {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  text-align: center;
+}
+.m-objectif .nom {
+  max-width: 100%;
+  margin-top: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 650;
+}
+.m-objectif .sous {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.m-anneau {
+  position: relative;
+}
+.m-anneau-fond {
+  fill: none;
+  stroke: var(--surface-3);
+  stroke-width: 6;
+}
+.m-anneau > span {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Budgets : une ligne par catégorie avec son rythme. */
+.m-budget {
+  padding: 12px 0 14px;
+}
+.m-budget + .m-budget {
+  border-top: 1px solid var(--border);
+}
+.m-budget-nom {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-weight: 650;
+}
+.m-budget-montant {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.m-budget-montant strong {
+  font-size: 15px;
+}
+.m-budget-montant span {
+  color: var(--text-dim);
+}
+.m-budget-pied {
+  font-size: 12.5px;
+  color: var(--text-dim);
+}
+
+/* Opérations : net du jour à droite de la date. */
+.m-jour {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+.m-jour .num {
+  letter-spacing: 0;
+  color: var(--text-muted);
+}
+.m-jour .num.pos {
+  color: var(--pos);
+}
+
+/* Cascade des indicateurs à l'affichage de l'écran. */
+.m-ecran .db-kpis > * {
+  animation: m-poser 0.62s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+.m-ecran .db-kpis > :nth-child(2) {
+  animation-delay: 0.06s;
+}
+.m-ecran .db-kpis > :nth-child(3) {
+  animation-delay: 0.12s;
+}
+.m-ecran .db-kpis > :nth-child(4) {
+  animation-delay: 0.18s;
+}
+.m-objectifs:has(> :only-child) {
+  grid-template-columns: 1fr;
+}

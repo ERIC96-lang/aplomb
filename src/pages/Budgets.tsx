@@ -6,7 +6,7 @@ import { MenuActions } from "../components/ui/Menu";
 import { SelecteurMois } from "../components/ui/SelecteurMois";
 import { Icon } from "../components/Icon";
 import { Defilant } from "../components/Defilant";
-import { Bandeau, Carte, LigneCalcul, Rangee, TotalCalcul, Vide } from "../components/ui/Page";
+import { Bandeau, Carte, LigneCalcul, Rangee, Rythme, TotalCalcul, Vide } from "../components/ui/Page";
 import { definirBudget, supprimerBudget } from "../db/repo";
 import { statutsBudgets, type BudgetEtat } from "../lib/budgets";
 import { moisDisponibles } from "../lib/calculs";
@@ -137,7 +137,7 @@ export function Budgets() {
             </>
           }
         >
-          <Rythme ratio={ratioGlobal} avancement={avancementMois} etat={nbDepasses > 0 ? "depasse" : nbAttention > 0 || enAvance ? "attention" : "ok"} />
+          <Rythme ratio={ratioGlobal} avancement={avancementMois} couleur={COULEUR_ETAT[nbDepasses > 0 ? "depasse" : nbAttention > 0 || enAvance ? "attention" : "ok"]} />
         </Bandeau>
       )}
 
@@ -173,7 +173,7 @@ export function Budgets() {
                   </span>
                   <span className="muted"> / {formatMontant(s.plafond)}</span>
                 </div>
-                <Rythme ratio={s.ratio} avancement={s.epargne ? null : avancementMois} etat={s.epargne ? "epargne" : s.etat} fin />
+                <Rythme ratio={s.ratio} avancement={s.epargne ? null : avancementMois} couleur={couleur} fin />
                 <div className="pg-budget-pied">
                   <span className="badge" style={{ background: `color-mix(in srgb, ${couleur} 16%, transparent)`, color: couleur }}>
                     {libelle}
@@ -325,32 +325,3 @@ function LigneAjout({
   );
 }
 
-/**
- * Consommation d'un budget avec, en fil à plomb, la part du mois écoulée :
- * une barre qui dépasse le fil signale des dépenses en avance sur le rythme.
- */
-function Rythme({
-  ratio,
-  avancement,
-  etat,
-  fin,
-}: {
-  ratio: number;
-  avancement: number | null;
-  etat: BudgetEtat | "epargne";
-  fin?: boolean;
-}) {
-  const couleur = etat === "epargne" ? "var(--teal)" : COULEUR_ETAT[etat];
-  return (
-    <div className={`pg-rythme${fin ? " fin" : ""}`}>
-      <div className="pg-rythme-piste">
-        <span className="pg-rythme-barre" style={{ width: `${Math.min(100, ratio * 100)}%`, background: couleur }} />
-      </div>
-      {avancement !== null && avancement > 0 && avancement < 1 && (
-        <span className="pg-rythme-fil" style={{ left: `${avancement * 100}%` }} title="Part du mois écoulée">
-          {!fin && <em>Aujourd'hui</em>}
-        </span>
-      )}
-    </div>
-  );
-}

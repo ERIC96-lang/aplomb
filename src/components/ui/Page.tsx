@@ -219,3 +219,33 @@ export function Vide({ ico, titre, texte, children }: { ico: IconName; titre: st
     </div>
   );
 }
+
+/**
+ * Barre de consommation avec, en fil à plomb, la part du mois écoulée : une
+ * barre qui dépasse le fil signale des dépenses en avance sur le rythme.
+ */
+export function Rythme({
+  ratio,
+  avancement,
+  couleur,
+  fin,
+}: {
+  ratio: number;
+  /** Part du mois écoulée (0..1), ou null pour ne pas afficher le fil. */
+  avancement: number | null;
+  couleur: string;
+  fin?: boolean;
+}) {
+  return (
+    <div className={`pg-rythme${fin ? " fin" : ""}`}>
+      <div className="pg-rythme-piste">
+        <span className="pg-rythme-barre" style={{ width: `${Math.min(100, ratio * 100)}%`, background: couleur }} />
+      </div>
+      {avancement !== null && avancement > 0 && avancement < 1 && (
+        <span className="pg-rythme-fil" style={{ left: `${avancement * 100}%` }} title="Part du mois écoulée">
+          {!fin && <em>Aujourd'hui</em>}
+        </span>
+      )}
+    </div>
+  );
+}
