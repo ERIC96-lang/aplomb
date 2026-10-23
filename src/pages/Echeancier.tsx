@@ -8,6 +8,9 @@ import { grouperParMois, prochainesOccurrences } from "../lib/echeancier";
 import { formatDate, formatMois, formatMontant, moisCourant, aujourdhui } from "../lib/format";
 import type { ChargeFixe, Echeance } from "../db/types";
 import { Segmente } from "../components/ui/Segmente";
+import { Bandeau, Carte, Vide } from "../components/ui/Page";
+import { format, parseISO } from "date-fns";
+import { fr } from "date-fns/locale";
 
 const LIB_PERIODE: Record<string, string> = {
   mensuelle: "Mensuelle",
@@ -41,6 +44,10 @@ export function Echeancier() {
   );
   const parMois = useMemo(() => grouperParMois(occurrences), [occurrences]);
   const totalPrev = occurrences.reduce((a, o) => a + o.charge.montant_attendu, 0);
+  const maxMois = Math.max(
+    1,
+    ...Array.from(parMois.values()).map((occs) => occs.reduce((a, o) => a + o.charge.montant_attendu, 0))
+  );
 
   async function generer(charge: ChargeFixe, e: Echeance) {
     const txId = await creerTransaction({
@@ -89,16 +96,52 @@ export function Echeancier() {
         />
       </div>
 
-      {/* À générer */}
+      {occurrences.length > 0 && (
+        <Bandeau
+          surtitre={`Sorties prévues · ${horizon} prochains mois`}
+          montant={totalPrev}
+          humeur={aGenerer.length > 0 ? "attention" : "ok"}
+          statut={aGenerer.length > 0 ? `${aGenerer.length} échue${aGenerer.length > 1 ? "s" : ""} à générer` : "Rien d'échu en attente"}
+          phrase={
+            <>
+              soit <strong className="num">{formatMontant(totalPrev / horizon)}</strong> par mois en moyenne
+              {occurrences[0] && (
+                <>
+                  {" "}· prochaine : {occurrences[0].charge.nom} le {formatDate(occurrences[0].date)}
+                </>
+              )}
+            </>
+          }
+        >
+          <div className="pg-barres" aria-hidden="true">
+            {Array.from(parMois.entries()).map(([m, occs], i) => {
+              const t = occs.reduce((a, o) => a + o.charge.montant_attendu, 0);
+              return (
+                <div key={m} className="pg-barre-mois">
+                  <span className="num">{formatMontant(t)}</span>
+                  <div className="pg-barre-piste">
+                    <span style={{ height: `${(t / maxMois) * 100}%`, animationDelay: `${0.15 + i * 0.05}s` }} />
+                  </div>
+                  <em>{format(parseISO(`${m}-01`), "MMM", { locale: fr })}</em>
+                </div>
+              );
+            })}
+          </div>
+        </Bandeau>
+      )}
+
       {aGenerer.length > 0 && (
-        <div className="card" style={{ marginBottom: 20 }}>
-          <div className="flex-between" style={{ marginBottom: 8 }}>
-            <h2 style={{ margin: 0 }}>À générer maintenant ({aGenerer.length})</h2>
+        <Carte
+          titre={`À générer maintenant (${aGenerer.length})`}
+          ico="sparkles"
+          className="pg-espace"
+          action={
             <button className="btn sm primary" onClick={toutGenerer}>
               <Icon name="check" size={14} /> Tout générer
             </button>
-          </div>
-          <p className="muted" style={{ fontSize: 12.5, marginTop: -4 }}>
+          }
+        >
+          <p className="muted" style={{ fontSize: 12.5, marginTop: -6 }}>
             Charges mensuelles échues ce mois-ci sans transaction saisie — l'app peut créer la transaction pour toi.
           </p>
           <div className="table-wrap">
@@ -121,51 +164,44 @@ export function Echeancier() {
               </tbody>
             </table>
           </div>
-        </div>
+        </Carte>
       )}
 
-      {/* Prévisionnel */}
-      <div className="card">
-        <div className="flex-between" style={{ marginBottom: 12 }}>
-          <h2 style={{ margin: 0 }}>Prévisionnel {horizon} mois</h2>
-          <span className="num muted">Total : <strong style={{ color: "var(--text)" }}>{formatMontant(totalPrev)}</strong></span>
-        </div>
+      <Carte titre={`Chronologie · ${horizon} mois`} ico="calendar">
         {occurrences.length === 0 ? (
-          <div className="empty">
-            <div className="big"><Icon name="calendar" size={44} strokeWidth={1.5} /></div>
-            <p>Aucune charge fixe active à prévoir. Ajoute des charges (avec leur périodicité) pour voir tes sorties à venir.</p>
-          </div>
+          <Vide
+            ico="calendar"
+            titre="Rien à prévoir"
+            texte="Ajoute tes charges fixes (avec leur périodicité) pour voir tes sorties d'argent à venir."
+          />
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+          <div className="pg-chrono">
             {Array.from(parMois.entries()).map(([m, occs]) => {
               const totalMois = occs.reduce((a, o) => a + o.charge.montant_attendu, 0);
               return (
-                <div key={m}>
-                  <div className="flex-between" style={{ marginBottom: 8 }}>
-                    <span style={{ fontWeight: 700, textTransform: "capitalize" }}>{formatMois(m)}</span>
-                    <span className="num" style={{ fontWeight: 700 }}>{formatMontant(totalMois)}</span>
+                <section key={m} className="pg-chrono-mois">
+                  <div className="pg-chrono-tete">
+                    <span className="pg-chrono-point" />
+                    <strong>{formatMois(m)}</strong>
+                    <span className="num">{formatMontant(totalMois)}</span>
                   </div>
-                  <div className="table-wrap">
-                    <table className="data">
-                      <tbody>
-                        {occs.map((o, i) => (
-                          <tr key={i}>
-                            <td style={{ width: 90 }}>{formatDate(o.date)}</td>
-                            <td style={{ fontWeight: 600 }}>{o.charge.nom}</td>
-                            <td><span className="chip" style={{ background: "var(--surface-2)" }}>{LIB_PERIODE[o.charge.periodicite]}</span></td>
-                            <td>{compteNom.get(o.charge.compte_id) ?? "—"}</td>
-                            <td className="right num montant-neg">− {formatMontant(o.charge.montant_attendu)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
+                  <ul>
+                    {occs.map((o, i) => (
+                      <li key={i}>
+                        <span className="db-date">{format(parseISO(o.date), "d MMM", { locale: fr })}</span>
+                        <span className="pg-chrono-nom">{o.charge.nom}</span>
+                        <span className="chip etat-inactif">{LIB_PERIODE[o.charge.periodicite]}</span>
+                        <span className="dim pg-chrono-compte">{compteNom.get(o.charge.compte_id) ?? "—"}</span>
+                        <span className="num pg-chrono-montant">− {formatMontant(o.charge.montant_attendu)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
               );
             })}
           </div>
         )}
-      </div>
+      </Carte>
     </>
   );
 }

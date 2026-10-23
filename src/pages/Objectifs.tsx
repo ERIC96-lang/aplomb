@@ -5,6 +5,8 @@ import { useAppData } from "../state/AppDataContext";
 import { useToast } from "../state/ToastContext";
 import { useNavigate } from "react-router-dom";
 import { Modal } from "../components/Modal";
+import { motion } from "motion/react";
+import { Bandeau, Carte, LigneCalcul, Rangee, TotalCalcul, Vide } from "../components/ui/Page";
 import { MenuActions } from "../components/ui/Menu";
 import { useDemandeNavigation } from "../hooks/useActionDemandee";
 import { Icon } from "../components/Icon";
@@ -47,6 +49,20 @@ export function Objectifs() {
     return Number.isFinite(m) ? m : 0;
   }, [transactions]);
 
+  const global = useMemo(() => {
+    const lignes = objectifs.map((o) => ({ o, actuel: montantActuelObjectif(o, comptes, transactions, objectifs) }));
+    const cible = lignes.reduce((a, l) => a + l.o.montant_cible, 0);
+    const actuel = lignes.reduce((a, l) => a + Math.min(l.actuel, l.o.montant_cible), 0);
+    return {
+      lignes,
+      cible: cible || 1,
+      actuel,
+      reste: Math.max(0, cible - actuel),
+      ratio: cible > 0 ? actuel / cible : 0,
+      atteints: lignes.filter((l) => l.actuel >= l.o.montant_cible).length,
+    };
+  }, [objectifs, comptes, transactions]);
+
   return (
     <>
       <div className="page-head">
@@ -64,14 +80,53 @@ export function Objectifs() {
       </div>
 
       {objectifs.length === 0 ? (
-        <div className="card empty">
-          <div className="big">
-            <Icon name="coins" size={44} strokeWidth={1.5} />
-          </div>
-          <p>Aucun objectif. Crée-en un (vacances, épargne de précaution, achat…) pour suivre ta progression.</p>
-        </div>
+        <Carte>
+          <Vide ico="target" titre="Aucun objectif" texte="Vacances, épargne de précaution, achat… Fixe un montant cible et suis ta progression.">
+            <button className="btn primary" onClick={() => setEdit("new")}>
+              <Icon name="plus" size={16} /> Créer un objectif
+            </button>
+          </Vide>
+        </Carte>
       ) : (
-        <div className="grid grid-auto">
+        <>
+        <Bandeau
+          surtitre="Épargné pour tes objectifs"
+          montant={global.actuel}
+          humeur="ok"
+          statut={`${Math.round(global.ratio * 100)} % du chemin`}
+          phrase={
+            <>
+              sur <strong className="num">{formatMontant(global.cible)}</strong> visés · {global.atteints}/{objectifs.length}{" "}
+              atteint{global.atteints > 1 ? "s" : ""}
+            </>
+          }
+          calcul={
+            <>
+              <LigneCalcul label="Cibles cumulées" valeur={global.cible} />
+              <LigneCalcul label="Déjà épargné" valeur={global.actuel} />
+              {epargneMoyenne > 0 && <LigneCalcul label="Épargne moyenne" valeur={epargneMoyenne} aide="par mois, 3 derniers mois" />}
+              <TotalCalcul label="Reste à épargner" valeur={global.reste} />
+            </>
+          }
+        >
+          <div className="pg-pile" aria-hidden="true">
+            {global.lignes.map(({ o, actuel }) =>
+              actuel > 0 ? (
+                <span key={o.id} style={{ width: `${(Math.min(actuel, o.montant_cible) / global.cible) * 100}%`, background: o.couleur }} />
+              ) : null
+            )}
+          </div>
+          <div className="pg-pile-legende">
+            {global.lignes.map(({ o, actuel }) => (
+              <span key={o.id}>
+                <span className="dot" style={{ background: o.couleur }} />
+                {o.nom}{" "}
+                <strong className="num">{o.montant_cible > 0 ? Math.min(100, Math.round((actuel / o.montant_cible) * 100)) : 0} %</strong>
+              </span>
+            ))}
+          </div>
+        </Bandeau>
+        <Rangee type="tiers">
           {objectifs.map((o) => (
             <ObjectifCard
               key={o.id}
@@ -94,7 +149,8 @@ export function Objectifs() {
               toast={toast}
             />
           ))}
-        </div>
+        </Rangee>
+        </>
       )}
 
       <AnimatePresence>
@@ -177,9 +233,12 @@ function ObjectifCard({
   const descriptionSuivi = mode === "versements" ? `Versements · ${compteNom}` : `Solde · ${compteNom}`;
 
   return (
-    <div className="card">
+    <div className="card pg-objectif">
       <div className="flex-between">
-        <div style={{ fontWeight: 700, fontSize: 16 }}>{o.nom}</div>
+        <div className="pg-obj-nom">
+          <span className="dot" style={{ background: o.couleur }} />
+          {o.nom}
+        </div>
         <MenuActions
           label={`Actions pour ${o.nom}`}
           elements={[
@@ -193,16 +252,17 @@ function ObjectifCard({
         />
       </div>
 
-      <div className="num" style={{ fontSize: 24, fontWeight: 750, margin: "10px 0 2px", color: `color-mix(in srgb, ${o.couleur} 70%, var(--text))` }}>
-        <Defilant valeur={montantActuel} />
-        <span className="muted" style={{ fontSize: 15, fontWeight: 500 }}> / {formatMontant(o.montant_cible)}</span>
-      </div>
-      <div className="progress" style={{ height: 10, marginTop: 8 }}>
-        <span style={{ width: `${ratio * 100}%`, background: o.couleur }} />
-      </div>
-      <div className="flex-between" style={{ marginTop: 6, fontSize: 12 }}>
-        <span className="dim">{Math.round(ratio * 100)} %</span>
-        <span className="dim">{atteint ? "Terminé" : `Reste ${formatMontant(reste)}`}</span>
+      <div className="pg-obj-corps">
+        <Anneau ratio={ratio} couleur={o.couleur} />
+        <div className="pg-obj-chiffres">
+          <div className="pg-obj-montant num" style={{ color: `color-mix(in srgb, ${o.couleur} 70%, var(--text))` }}>
+            <Defilant valeur={montantActuel} />
+          </div>
+          <div className="muted">sur {formatMontant(o.montant_cible)}</div>
+          <div className={atteint ? "pg-obj-atteint" : "dim"}>
+            {atteint ? "Objectif atteint" : `Reste ${formatMontant(reste)}`}
+          </div>
+        </div>
       </div>
 
       {compteNom && (
@@ -449,5 +509,33 @@ function ObjectifForm({
         </div>
       </div>
     </Modal>
+  );
+}
+
+/** Anneau de progression : se remplit à l'apparition, pourcentage au centre. */
+function Anneau({ ratio, couleur }: { ratio: number; couleur: string }) {
+  const r = 30;
+  const circ = 2 * Math.PI * r;
+  return (
+    <div className="pg-anneau">
+      <svg viewBox="0 0 72 72" width="72" height="72" aria-hidden="true">
+        <circle cx="36" cy="36" r={r} className="pg-anneau-fond" />
+        <motion.circle
+          cx="36"
+          cy="36"
+          r={r}
+          fill="none"
+          stroke={couleur}
+          strokeWidth={7}
+          strokeLinecap="round"
+          strokeDasharray={circ}
+          transform="rotate(-90 36 36)"
+          initial={{ strokeDashoffset: circ }}
+          animate={{ strokeDashoffset: circ * (1 - Math.min(1, ratio)) }}
+          transition={{ type: "spring", stiffness: 60, damping: 15, delay: 0.25 }}
+        />
+      </svg>
+      <span className="num">{Math.round(Math.min(1, ratio) * 100)}%</span>
+    </div>
   );
 }

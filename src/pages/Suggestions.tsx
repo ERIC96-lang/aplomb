@@ -1,3 +1,6 @@
+import { Bandeau, Carte, Rangee, Vide } from "../components/ui/Page";
+import { format, parseISO } from "date-fns";
+import { fr } from "date-fns/locale";
 import { useMemo, useState } from "react";
 import { useAppData } from "../state/AppDataContext";
 import { useToast } from "../state/ToastContext";
@@ -7,7 +10,7 @@ import {
   creerChargeFixe,
   enregistrerDecisionSuggestion,
 } from "../db/repo";
-import { formatMois, formatMontant } from "../lib/format";
+import { formatMontant } from "../lib/format";
 import type { CandidatRecurrence } from "../db/types";
 
 export function Suggestions() {
@@ -102,59 +105,70 @@ export function Suggestions() {
       </div>
 
       {candidats.length === 0 ? (
-        <div className="card empty">
-          <div className="big">
-            <Icon name="sparkles" size={44} strokeWidth={1.5} />
-          </div>
-          <p>
-            Aucune suggestion pour le moment. Ressaisis quelques mois d'historique :
-            l'app repérera les dépenses qui reviennent chaque mois (même catégorie,
-            montant et jour proches, sur au moins 3 mois).
-          </p>
-        </div>
+        <Carte>
+          <Vide
+            ico="sparkles"
+            titre="Aucune suggestion pour le moment"
+            texte="Ressaisis quelques mois d'historique : l'app repérera les dépenses qui reviennent chaque mois (même catégorie, montant et jour proches, sur au moins 3 mois)."
+          />
+        </Carte>
       ) : (
-        <div className="grid grid-auto">
-          {candidats.map((c) => {
-            const compteId = compteDominant(c);
-            return (
-              <div className="card" key={c.signature}>
-                <div className="flex-between">
-                  <div style={{ fontWeight: 700, fontSize: 16 }}>{c.libelle}</div>
-                  <span className="chip etat-info">
-                    {c.nb_occurrences}× détectée
-                  </span>
-                </div>
-                <div style={{ fontSize: 24, fontWeight: 700, margin: "12px 0 4px" }}>
-                  ≈ {formatMontant(c.montant_moyen)}
-                </div>
-                <div className="muted" style={{ fontSize: 13 }}>
-                  vers le {c.jour_moyen} du mois
-                  {c.categorie_id != null && ` · ${catNom.get(c.categorie_id) ?? ""}`}
-                  {compteId != null && ` · ${compteNom.get(compteId) ?? ""}`}
-                </div>
-                <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>
-                  Mois : {c.mois.map((m) => formatMois(m)).join(", ")}
-                </div>
-                <div className="flex" style={{ marginTop: 16 }}>
-                  <button
-                    className="btn primary sm"
-                    disabled={busy === c.signature}
-                    onClick={() => accepter(c)}
-                  >
-                    <Icon name="check" size={15} /> Créer la charge fixe
-                  </button>
-                  <button
-                    className="btn sm"
-                    disabled={busy === c.signature}
-                    onClick={() => ignorer(c)}
-                  >
-                    Ignorer
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        <>
+          <Bandeau
+            surtitre="Charges récurrentes détectées"
+            valeur={
+              <>
+                {candidats.length} <span className="pg-unite">à valider</span>
+              </>
+            }
+            humeur="attention"
+            statut="Rien n'est créé sans toi"
+            phrase={
+              <>
+                ≈ <strong className="num">{formatMontant(candidats.reduce((a, c) => a + c.montant_moyen, 0))}</strong> par mois
+                si tu les ajoutes toutes à tes charges fixes
+              </>
+            }
+          />
+          <Rangee type="tiers">
+            {candidats.map((c) => {
+              const compteId = compteDominant(c);
+              return (
+                <section className="card pg-suggestion" key={c.signature}>
+                  <div className="pg-compte-tete">
+                    <span className="pg-compte-ico" style={{ color: "var(--amber)" }}>
+                      <Icon name="repeat" size={18} />
+                    </span>
+                    <div>
+                      <div className="pg-compte-nom">{c.libelle}</div>
+                      <div className="dim pg-compte-type">
+                        {c.categorie_id != null ? catNom.get(c.categorie_id) ?? "Sans catégorie" : "Sans catégorie"}
+                      </div>
+                    </div>
+                    <span className="chip etat-info">{c.nb_occurrences}×</span>
+                  </div>
+                  <div className="pg-compte-solde num">≈ {formatMontant(c.montant_moyen)}</div>
+                  <div className="muted" style={{ fontSize: 13 }}>
+                    vers le {c.jour_moyen} du mois{compteId != null && ` · ${compteNom.get(compteId) ?? ""}`}
+                  </div>
+                  <div className="pg-mois-detectes">
+                    {c.mois.map((m) => (
+                      <span key={m}>{format(parseISO(`${m}-01`), "MMM yy", { locale: fr })}</span>
+                    ))}
+                  </div>
+                  <div className="flex pg-suggestion-actions">
+                    <button className="btn primary sm" disabled={busy === c.signature} onClick={() => accepter(c)}>
+                      <Icon name="check" size={15} /> Créer la charge fixe
+                    </button>
+                    <button className="btn sm ghost" disabled={busy === c.signature} onClick={() => ignorer(c)}>
+                      Ignorer
+                    </button>
+                  </div>
+                </section>
+              );
+            })}
+          </Rangee>
+        </>
       )}
     </>
   );

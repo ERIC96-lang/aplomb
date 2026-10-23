@@ -5,6 +5,9 @@ import { useToast } from "../state/ToastContext";
 import { Modal } from "../components/Modal";
 import { MenuActions, type EntreeMenu } from "../components/ui/Menu";
 import { SelecteurMois } from "../components/ui/SelecteurMois";
+import { Bandeau, LigneCalcul, TotalCalcul } from "../components/ui/Page";
+import { FilDuMois, type EtatEvenement } from "../components/dashboard/FilDuMois";
+import { getDaysInMonth, parseISO } from "date-fns";
 import { useDemandeNavigation } from "../hooks/useActionDemandee";
 import { Icon } from "../components/Icon";
 import { TransactionModal } from "../components/TransactionModal";
@@ -22,7 +25,23 @@ import {
   ouvrirJustificatif,
 } from "../lib/justificatifs";
 import { formatMois, formatMontant, moisCourant } from "../lib/format";
-import type { ChargeFixe, Echeance, Periodicite, Transaction } from "../db/types";
+import type { ChargeFixe, Echeance, EcheanceStatut, Periodicite, Transaction } from "../db/types";
+
+const ETAT_FIL: Record<EcheanceStatut, EtatEvenement> = {
+  a_venir: "avenir",
+  en_retard: "retard",
+  payee_sans_justif: "paye",
+  payee_avec_justif: "paye",
+  reglee_ailleurs: "ailleurs",
+};
+
+/** Nombre d'occurrences par mois selon la périodicité. */
+const FACTEUR_MENSUEL: Record<string, number> = {
+  mensuelle: 1,
+  hebdomadaire: 52 / 12,
+  trimestrielle: 1 / 3,
+  annuelle: 1 / 12,
+};
 
 const STATUT_LABEL: Record<string, string> = {
   a_venir: "À venir",
@@ -61,6 +80,34 @@ export function ChargesFixes() {
         .filter((x): x is { e: Echeance; charge: ChargeFixe } => !!x.charge)
         .sort((a, b) => a.charge.jour_echeance - b.charge.jour_echeance),
     [echeances, mois, chargeById]
+  );
+
+  // Bilan du mois consulté (montants attendus par statut).
+  const bilan = useMemo(() => {
+    const somme = (f: (e: Echeance) => boolean) =>
+      echeancesMois.filter(({ e }) => f(e)).reduce((a, { charge }) => a + charge.montant_attendu, 0);
+    const compte = (f: (e: Echeance) => boolean) => echeancesMois.filter(({ e }) => f(e)).length;
+    const regle = (e: Echeance) => e.statut === "payee_avec_justif" || e.statut === "payee_sans_justif";
+    return {
+      total: somme(() => true),
+      reglees: somme(regle),
+      ailleurs: somme((e) => e.statut === "reglee_ailleurs"),
+      aVenir: somme((e) => e.statut === "a_venir"),
+      retard: somme((e) => e.statut === "en_retard"),
+      reste: somme((e) => e.statut === "a_venir" || e.statut === "en_retard"),
+      nbReglees: compte((e) => regle(e) || e.statut === "reglee_ailleurs"),
+      nbAVenir: compte((e) => e.statut === "a_venir"),
+      nbRetard: compte((e) => e.statut === "en_retard"),
+    };
+  }, [echeancesMois]);
+
+  // Coût mensuel moyen des charges actives (toutes périodicités ramenées au mois).
+  const coutMensuel = useMemo(
+    () =>
+      chargesFixes
+        .filter((c) => c.actif)
+        .reduce((a, c) => a + c.montant_attendu * (FACTEUR_MENSUEL[c.periodicite] ?? 1), 0),
+    [chargesFixes]
   );
 
   /** Dépense créée automatiquement à l'échéance et pas encore confirmée (simple prévision). */
@@ -157,8 +204,10 @@ export function ChargesFixes() {
       <div className="page-head">
         <div>
           <h1>Charges fixes</h1>
-          <div className="sub">Échéances de {formatMois(mois)} et gestion des charges récurrentes</div>
+          <div className="sub">Échéances du mois et gestion des charges récurrentes</div>
         </div>
+        <div className="flex" style={{ gap: 10 }}>
+        <SelecteurMois valeur={mois} onChange={setMois} disponibles={moisEcheances} />
         <button
           className="btn primary"
           onClick={() => setEdit("new")}
@@ -167,13 +216,61 @@ export function ChargesFixes() {
         >
           <Icon name="plus" size={16} /> Nouvelle charge fixe
         </button>
+        </div>
       </div>
+
+      {echeancesMois.length > 0 && (
+        <Bandeau
+          surtitre={`Charges fixes · ${formatMois(mois)}`}
+          montant={bilan.total}
+          humeur={bilan.retard > 0 ? "risque" : "ok"}
+          statut={
+            bilan.retard > 0
+              ? `${bilan.nbRetard} en retard`
+              : bilan.reste === 0
+                ? "Tout est réglé"
+                : `${bilan.nbAVenir} à venir`
+          }
+          phrase={
+            <>
+              {bilan.nbReglees}/{echeancesMois.length} réglée{bilan.nbReglees > 1 ? "s" : ""}
+              {bilan.reste > 0 && (
+                <>
+                  {" "}· reste <strong className="num">{formatMontant(bilan.reste)}</strong> à payer
+                </>
+              )}
+            </>
+          }
+          calcul={
+            <>
+              <LigneCalcul label="Réglées" valeur={bilan.reglees} />
+              {bilan.ailleurs > 0 && <LigneCalcul label="Réglées hors comptes" valeur={bilan.ailleurs} aide="PayPal… sans effet sur les soldes" />}
+              <LigneCalcul label="À venir" valeur={bilan.aVenir} />
+              {bilan.retard > 0 && <LigneCalcul label="En retard" valeur={-bilan.retard} />}
+              <TotalCalcul label="Reste à payer" valeur={-bilan.reste} />
+            </>
+          }
+        >
+          <FilDuMois
+            jours={getDaysInMonth(parseISO(`${mois}-01`))}
+            aujourdhui={estMoisCourant ? new Date().getDate() : null}
+            evenements={echeancesMois.map(({ e, charge }) => ({
+              jour: Math.min(charge.jour_echeance, getDaysInMonth(parseISO(`${mois}-01`))),
+              label: charge.nom,
+              montant: charge.montant_attendu,
+              etat: ETAT_FIL[e.statut],
+            }))}
+          />
+        </Bandeau>
+      )}
 
       {/* Échéances du mois */}
       <div className="card" style={{ marginBottom: 20 }}>
-        <div className="flex-between" style={{ marginBottom: 16, flexWrap: "wrap" }}>
-          <h2 style={{ margin: 0 }}>Échéances de {formatMois(mois)}</h2>
-          <SelecteurMois valeur={mois} onChange={setMois} disponibles={moisEcheances} />
+        <div className="db-carte-tete">
+          <h2 className="db-carte-titre">
+            <span className="db-carte-ico"><Icon name="calendar" size={16} /></span>
+            Échéances de {formatMois(mois)}
+          </h2>
         </div>
         {echeancesMois.length === 0 ? (
           <p className="muted">
@@ -236,7 +333,24 @@ export function ChargesFixes() {
 
       {/* Toutes les charges */}
       <div className="card">
-        <h2>Toutes les charges fixes</h2>
+        <div className="db-carte-tete">
+          <h2 className="db-carte-titre">
+            <span className="db-carte-ico"><Icon name="repeat" size={16} /></span>
+            Toutes les charges fixes
+          </h2>
+          {chargesFixes.length > 0 && (
+            <span className="pg-cout">
+              <span>
+                <em>par mois</em>
+                <strong className="num">{formatMontant(coutMensuel)}</strong>
+              </span>
+              <span>
+                <em>par an</em>
+                <strong className="num">{formatMontant(coutMensuel * 12)}</strong>
+              </span>
+            </span>
+          )}
+        </div>
         {chargesFixes.length === 0 ? (
           <div className="empty">
             <div className="big">

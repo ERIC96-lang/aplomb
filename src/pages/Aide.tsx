@@ -308,6 +308,8 @@ const SECTIONS: Section[] = [
           "Les quatre indicateurs (revenus, dépenses, épargne, budgets) comparent au mois précédent ; la petite courbe montre les 6 derniers mois.",
           "Sur un mois passé, l'en-tête devient le bilan du mois (revenus, dépenses, épargne).",
           "Cliquez sur une opération récente pour l'ouvrir directement.",
+          "Les autres pages suivent le même principe : un bandeau en tête résume la situation (patrimoine, charges du mois, budgets, objectifs, prévisions…) avec son statut et son calcul.",
+          "Dans Budgets, le trait vertical sur chaque barre marque la part du mois écoulée : si la barre le dépasse nettement, tu dépenses plus vite que le mois n'avance.",
         ],
       },
       {

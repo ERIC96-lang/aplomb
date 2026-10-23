@@ -12,7 +12,8 @@ import {
   totauxPeriode,
 } from "../lib/calculs";
 import { pointsFluxAnnee } from "../lib/series";
-import { CategorieBars, FluxBarChart } from "../components/charts";
+import { CategorieBars, CategorieDonut, FluxBarChart } from "../components/charts";
+import { Bandeau, Carte, Indicateurs, Kpi, LigneCalcul, Rangee, TotalCalcul } from "../components/ui/Page";
 import { Icon } from "../components/Icon";
 import { SelecteurAnnee, SelecteurMois } from "../components/ui/SelecteurMois";
 import { genererRapportPdf } from "../lib/pdf";
@@ -64,7 +65,7 @@ export function Rapports() {
       revenus: d.t.revenus,
       depenses: d.t.depenses,
       solde: d.t.solde,
-      repartition: d.rep.map((r) => ({ nom: r.nom, montant: r.montant })),
+      repartition: d.rep.map((r) => ({ nom: r.nom, montant: r.montant, couleur: r.couleur })),
     });
     if (ok) toast("Rapport PDF généré");
   }
@@ -120,6 +121,32 @@ export function Rapports() {
   );
 }
 
+/** Bandeau commun : l'épargne de la période, son taux, le calcul. */
+function Synthese({ surtitre, revenus, depenses }: { surtitre: string; revenus: number; depenses: number }) {
+  const solde = revenus - depenses;
+  const taux = revenus > 0 ? Math.round((solde / revenus) * 100) : 0;
+  return (
+    <Bandeau
+      surtitre={surtitre}
+      montant={solde}
+      humeur={solde >= 0 ? "ok" : "risque"}
+      statut={revenus > 0 ? `${taux} % épargnés` : solde >= 0 ? "Équilibré" : "Déficitaire"}
+      phrase={
+        <>
+          épargnés sur <strong className="num">{formatMontant(revenus)}</strong> de revenus
+        </>
+      }
+      calcul={
+        <>
+          <LigneCalcul label="Revenus" valeur={revenus} />
+          <LigneCalcul label="Dépenses" valeur={-depenses} />
+          <TotalCalcul label="Épargne" valeur={solde} />
+        </>
+      }
+    />
+  );
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function RapportPeriode({ debut, fin, transactions, categories }: any) {
   const t = useMemo(() => totauxPeriode(transactions, debut, fin), [transactions, debut, fin]);
@@ -127,26 +154,12 @@ function RapportPeriode({ debut, fin, transactions, categories }: any) {
     () => repartitionDepensesPeriode(transactions, categories, debut, fin),
     [transactions, categories, debut, fin]
   );
-  const taux = t.revenus > 0 ? (t.solde / t.revenus) * 100 : 0;
+  const total = rep.reduce((a: number, r: { montant: number }) => a + r.montant, 0);
   return (
-    <div className="animate-in">
-      <div className="card" style={{ marginBottom: 16 }}>
-        <div className="flex-between">
-          <h2 style={{ margin: 0 }}>{formatDate(debut)} – {formatDate(fin)}</h2>
-          <span className="chip" style={{ background: "var(--brand-grad-soft)" }}>Période personnalisée</span>
-        </div>
-      </div>
-      <div className="grid grid-auto" style={{ marginBottom: 16 }}>
-        <Bloc label="Revenus" value={t.revenus} tone="pos" />
-        <Bloc label="Dépenses" value={t.depenses} tone="neg" />
-        <Bloc label="Épargne" value={t.solde} tone={t.solde >= 0 ? "pos" : "neg"} />
-        <Bloc label="Taux d'épargne" value={taux} suffix=" %" raw />
-      </div>
-      <div className="card">
-        <h2>Répartition des dépenses</h2>
-        {rep.length === 0 ? <p className="muted">Aucune dépense sur cette période.</p> : <CategorieBars data={rep} />}
-      </div>
-    </div>
+    <>
+      <Synthese surtitre={`Période · ${formatDate(debut)} – ${formatDate(fin)}`} revenus={t.revenus} depenses={t.depenses} />
+      <Repartition rep={rep} total={total} vide="Aucune dépense sur cette période." />
+    </>
   );
 }
 
@@ -159,33 +172,21 @@ function RapportMensuel({ mois, transactions, categories }: any) {
     () => repartitionDepenses(transactions, categories, mois),
     [transactions, categories, mois]
   );
-  const taux = t.revenus > 0 ? (t.solde / t.revenus) * 100 : 0;
+  const total = rep.reduce((a: number, r: { montant: number }) => a + r.montant, 0);
 
   return (
-    <div className="animate-in">
-      <div className="card" style={{ marginBottom: 16 }}>
-        <div className="flex-between">
-          <h2 style={{ margin: 0, textTransform: "capitalize" }}>{formatMois(mois)}</h2>
-          <span className="chip" style={{ background: "var(--brand-grad-soft)" }}>Rapport mensuel</span>
-        </div>
-      </div>
-
-      <div className="grid grid-auto" style={{ marginBottom: 16 }}>
-        <Bloc label="Revenus" value={t.revenus} tone="pos" />
-        <Bloc label="Dépenses" value={t.depenses} tone="neg" />
-        <Bloc label="Épargne du mois" value={t.solde} tone={t.solde >= 0 ? "pos" : "neg"} />
-        <Bloc label="Taux d'épargne" value={taux} suffix=" %" raw />
-      </div>
-
-      <div className="grid grid-2" style={{ alignItems: "start" }}>
-        <div className="card">
-          <h2>Comparaison avec {formatMois(moisPrec)}</h2>
+    <>
+      <Synthese surtitre={`Rapport mensuel · ${formatMois(mois)}`} revenus={t.revenus} depenses={t.depenses} />
+      <Rangee>
+        <Repartition rep={rep} total={total} vide="Aucune dépense ce mois-ci." seule />
+        <Carte titre={`Comparé à ${formatMois(moisPrec)}`} ico="trending-up">
+          <div className="table-wrap">
           <table className="data">
             <thead>
               <tr>
                 <th></th>
-                <th className="right">{formatMois(moisPrec)}</th>
-                <th className="right">{formatMois(mois)}</th>
+                <th className="right">Avant</th>
+                <th className="right">Ce mois</th>
                 <th className="right">Écart</th>
               </tr>
             </thead>
@@ -195,17 +196,10 @@ function RapportMensuel({ mois, transactions, categories }: any) {
               <LigneComp label="Épargne" prev={tp.solde} cur={t.solde} />
             </tbody>
           </table>
-        </div>
-        <div className="card">
-          <h2>Principales dépenses</h2>
-          {rep.length === 0 ? (
-            <p className="muted">Aucune dépense ce mois-ci.</p>
-          ) : (
-            <CategorieBars data={rep.slice(0, 8)} />
-          )}
-        </div>
-      </div>
-    </div>
+          </div>
+        </Carte>
+      </Rangee>
+    </>
   );
 }
 
@@ -216,74 +210,49 @@ function RapportAnnuel({ annee, comptes, transactions, categories }: any) {
     () => repartitionDepenses(transactions, categories, String(annee)),
     [transactions, categories, annee]
   );
-  const flux = useMemo(
-    () => pointsFluxAnnee(transactions, annee, undefined),
-    [transactions, annee]
-  );
+  const flux = useMemo(() => pointsFluxAnnee(transactions, annee, undefined), [transactions, annee]);
   const soldeFin = useMemo(() => {
     const iso = `${annee}-12-31`;
     const jusque = transactions.filter((x: { date: string }) => x.date <= iso);
     return soldeGlobal(comptes, jusque);
   }, [comptes, transactions, annee]);
-  const taux = t.revenus > 0 ? (t.solde / t.revenus) * 100 : 0;
-  const moyMensuelleDep = t.depenses / 12;
+  const total = rep.reduce((a: number, r: { montant: number }) => a + r.montant, 0);
+  const meilleur = flux.reduce(
+    (m: { label: string; epargne: number } | null, f: { label: string; epargne: number }) => (!m || f.epargne > m.epargne ? f : m),
+    null
+  );
 
   return (
-    <div className="animate-in">
-      <div className="card" style={{ marginBottom: 16 }}>
-        <div className="flex-between">
-          <h2 style={{ margin: 0 }}>Année {annee}</h2>
-          <span className="chip" style={{ background: "var(--brand-grad-soft)" }}>Rapport annuel</span>
-        </div>
-      </div>
-
-      <div className="grid grid-auto" style={{ marginBottom: 16 }}>
-        <Bloc label="Revenus de l'année" value={t.revenus} tone="pos" />
-        <Bloc label="Dépenses de l'année" value={t.depenses} tone="neg" />
-        <Bloc label="Épargne de l'année" value={t.solde} tone={t.solde >= 0 ? "pos" : "neg"} />
-        <Bloc label="Taux d'épargne" value={taux} suffix=" %" raw />
-        <Bloc label="Dépense mensuelle moyenne" value={moyMensuelleDep} tone="neutral" />
-        <Bloc label="Solde au 31/12" value={soldeFin} tone={soldeFin >= 0 ? "pos" : "neg"} />
-      </div>
-
-      <div className="card" style={{ marginBottom: 16 }}>
-        <h2>Flux mois par mois — {annee}</h2>
+    <>
+      <Synthese surtitre={`Rapport annuel · ${annee}`} revenus={t.revenus} depenses={t.depenses} />
+      <Indicateurs>
+        <Kpi label="Revenus / mois" ico="trending-up" montant={t.revenus / 12} ton="pos" sous="moyenne sur 12 mois" serie={flux.map((f: { revenus: number }) => f.revenus)} couleur="var(--green)" />
+        <Kpi label="Dépenses / mois" ico="trending-down" montant={t.depenses / 12} ton="neg" sous="moyenne sur 12 mois" serie={flux.map((f: { depenses: number }) => f.depenses)} couleur="var(--red)" />
+        <Kpi label="Meilleur mois" ico="sparkles" montant={meilleur?.epargne ?? 0} sous={meilleur ? `épargnés en ${meilleur.label}` : undefined} />
+        <Kpi label="Solde au 31/12" ico="wallet" montant={soldeFin} ton={soldeFin >= 0 ? undefined : "neg"} sous="tous comptes" />
+      </Indicateurs>
+      <Carte titre={`Flux mois par mois — ${annee}`} ico="trending-up" className="pg-espace">
         <FluxBarChart data={flux} />
-      </div>
-
-      <div className="card">
-        <h2>Répartition annuelle des dépenses</h2>
-        {rep.length === 0 ? (
-          <p className="muted">Aucune dépense sur {annee}.</p>
-        ) : (
-          <CategorieBars data={rep} />
-        )}
-      </div>
-    </div>
+      </Carte>
+      <Repartition rep={rep} total={total} vide={`Aucune dépense sur ${annee}.`} />
+    </>
   );
 }
 
-function Bloc({
-  label,
-  value,
-  tone = "neutral",
-  suffix,
-  raw,
-}: {
-  label: string;
-  value: number;
-  tone?: "pos" | "neg" | "neutral";
-  suffix?: string;
-  raw?: boolean;
-}) {
-  const cls = tone === "pos" ? "pos" : tone === "neg" ? "neg" : "";
+/** Dépenses par catégorie : donut + détail, comme sur le tableau de bord. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function Repartition({ rep, total, vide, seule }: { rep: any[]; total: number; vide: string; seule?: boolean }) {
   return (
-    <div className="stat">
-      <div className="label">{label}</div>
-      <div className={`value num ${cls}`}>
-        {raw ? `${value.toFixed(0)}${suffix ?? ""}` : formatMontant(value)}
-      </div>
-    </div>
+    <Carte titre="Dépenses par catégorie" ico="coins" className={seule ? "" : "pg-espace"}>
+      {rep.length === 0 ? (
+        <p className="muted db-vide">{vide}</p>
+      ) : (
+        <div className="db-repartition">
+          <CategorieDonut data={rep} total={total} />
+          <CategorieBars data={rep.slice(0, 8)} />
+        </div>
+      )}
+    </Carte>
   );
 }
 

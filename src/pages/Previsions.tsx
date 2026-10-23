@@ -7,8 +7,11 @@ import { calculerPrevisions, estimerRevenus } from "../lib/previsions";
 import { lireProfil } from "../lib/profil";
 import { formatMontant, formatMois } from "../lib/format";
 import { Segmente } from "../components/ui/Segmente";
+import { Bandeau, Carte, LigneCalcul, TotalCalcul, type Humeur } from "../components/ui/Page";
 
 type Scenario = "bas" | "attendu" | "haut";
+
+const LIBELLE_SCENARIO: Record<Scenario, string> = { bas: "prudent", attendu: "attendu", haut: "optimiste" };
 
 export function Previsions() {
   const { comptes, transactions, chargesFixes, objectifs } = useAppData();
@@ -27,6 +30,18 @@ export function Previsions() {
 
   const courbe = prev.mois.map((m) => ({ key: m.mois, label: m.label, solde: m.soldeProjete }));
   const deficit = prev.epargneRecommandee > prev.capaciteEpargne + 0.01;
+  const dernier = prev.mois[prev.mois.length - 1];
+  const premierNegatif = prev.mois.find((m) => m.soldeProjete < 0);
+  const plansDates = prev.plans.filter((p) => p.moisRestants != null);
+
+  const humeur: Humeur = premierNegatif ? "risque" : deficit || prev.capaciteEpargne < 0 ? "attention" : "ok";
+  const statut = premierNegatif
+    ? `Solde négatif en ${premierNegatif.label}`
+    : deficit
+      ? "Objectifs trop ambitieux"
+      : prev.capaciteEpargne < 0
+        ? "Mois déficitaires"
+        : "Trajectoire saine";
 
   return (
     <>
@@ -61,54 +76,77 @@ export function Previsions() {
         </div>
       </div>
 
-      {aScenarios && (
-        <div className="card" style={{ marginBottom: 18, display: "flex", gap: 20, flexWrap: "wrap" }}>
-          <span className="muted" style={{ fontSize: 13 }}>Revenu mensuel estimé :</span>
-          <span><strong style={{ color: "var(--red)" }}>Prudent</strong> {formatMontant(estim.bas)}</span>
-          <span><strong>Attendu</strong> {formatMontant(estim.attendu)}</span>
-          <span><strong style={{ color: "var(--green)" }}>Optimiste</strong> {formatMontant(estim.haut)}</span>
-        </div>
-      )}
-
       {!profil.configure && (
-        <div
-          className="card"
-          style={{ marginBottom: 18, display: "flex", alignItems: "center", gap: 12 }}
-        >
-          <span style={{ color: "var(--amber)" }}><Icon name="alert" size={22} /></span>
+        <div className="card pg-alerte">
+          <span className="pg-alerte-ico">
+            <Icon name="alert" size={18} />
+          </span>
           <div style={{ flex: 1 }}>
-            Renseigne ton <strong>profil</strong> (revenu mensuel, jour de paie) pour que l'app projette automatiquement tes revenus.
+            Renseigne ton <strong>profil</strong> (revenu mensuel, jour de paie) pour que l'app projette automatiquement
+            tes revenus.
           </div>
-          <Link to="/parametres" className="btn sm primary">Configurer</Link>
+          <Link to="/parametres?onglet=profil" className="btn sm primary">
+            Configurer
+          </Link>
         </div>
       )}
 
-      {/* Résumé */}
-      <div className="grid grid-auto" style={{ marginBottom: 18 }}>
-        <Tuile label="Revenu mensuel" value={prev.revenusMensuels} icon="trending-up" />
-        <Tuile label="Charges fixes / mois" value={prev.chargesMensuelMoy} icon="repeat" />
-        <Tuile label="Dépenses variables (moy.)" value={prev.depensesVariablesMoy} icon="card" />
-        <Tuile label="Capacité d'épargne / mois" value={prev.capaciteEpargne} icon="coins" tone={prev.capaciteEpargne >= 0 ? "pos" : "neg"} />
-      </div>
+      <Bandeau
+        surtitre={dernier ? `Solde projeté · fin ${dernier.label}` : "Solde projeté"}
+        montant={dernier?.soldeProjete ?? 0}
+        humeur={humeur}
+        statut={statut}
+        phrase={
+          <>
+            Capacité d'épargne <strong className="num">{formatMontant(prev.capaciteEpargne)}</strong> / mois · scénario{" "}
+            {LIBELLE_SCENARIO[scenario]}
+          </>
+        }
+        calcul={
+          <>
+            <LigneCalcul label="Revenu mensuel" valeur={prev.revenusMensuels} aide={aScenarios ? `scénario ${LIBELLE_SCENARIO[scenario]}` : undefined} />
+            <LigneCalcul label="Charges fixes" valeur={-prev.chargesMensuelMoy} />
+            <LigneCalcul label="Dépenses variables" valeur={-prev.depensesVariablesMoy} aide="moyenne récente" />
+            <TotalCalcul label="Capacité d'épargne" valeur={prev.capaciteEpargne} />
+          </>
+        }
+      >
+        {aScenarios && (
+          <div className="pg-scenarios">
+            {(["bas", "attendu", "haut"] as Scenario[]).map((s) => (
+              <button
+                key={s}
+                type="button"
+                className={"pg-scenario" + (s === scenario ? " actif" : "")}
+                onClick={() => setScenario(s)}
+              >
+                <em>{LIBELLE_SCENARIO[s]}</em>
+                <strong className="num">{formatMontant(estim[s])}</strong>
+                <span>revenu / mois</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </Bandeau>
 
-      {/* Courbe solde projeté */}
-      <div className="card" style={{ marginBottom: 18 }}>
-        <h2>Solde projeté</h2>
+      <Carte titre="Trajectoire du solde" ico="trending-up" className="pg-espace">
         <SoldeAreaChart data={courbe} />
-      </div>
+      </Carte>
 
-      {/* Objectifs : épargne optimale */}
-      {prev.plans.some((p) => p.moisRestants != null) && (
-        <div className="card" style={{ marginBottom: 18 }}>
-          <div className="flex-between" style={{ marginBottom: 8 }}>
-            <h2 style={{ margin: 0 }}>Épargne optimale pour tes objectifs</h2>
-            {deficit ? (
+      {plansDates.length > 0 && (
+        <Carte
+          titre="Épargne optimale pour tes objectifs"
+          ico="target"
+          className="pg-espace"
+          action={
+            deficit ? (
               <span className="badge en_retard">Capacité insuffisante</span>
             ) : (
               <span className="badge payee_avec_justif">Objectifs atteignables</span>
-            )}
-          </div>
-          <p className="muted" style={{ fontSize: 12.5, marginTop: -4 }}>
+            )
+          }
+        >
+          <p className="muted" style={{ fontSize: 12.5, marginTop: -6 }}>
             Montant à épargner chaque mois pour tenir chaque échéance. Total requis :{" "}
             <strong style={{ color: deficit ? "var(--red)" : "var(--green)" }}>
               {formatMontant(prev.epargneRecommandee)}
@@ -118,26 +156,38 @@ export function Previsions() {
           <div className="table-wrap">
             <table className="data">
               <thead>
-                <tr><th>Objectif</th><th>Échéance</th><th className="right">Reste</th><th className="right">À épargner / mois</th></tr>
+                <tr>
+                  <th>Objectif</th>
+                  <th>Échéance</th>
+                  <th className="right">Reste</th>
+                  <th className="right">À épargner / mois</th>
+                </tr>
               </thead>
               <tbody>
-                {prev.plans.filter((p) => p.moisRestants != null).map((p) => (
+                {plansDates.map((p) => (
                   <tr key={p.objectif.id}>
-                    <td style={{ fontWeight: 600 }}>{p.objectif.nom}</td>
-                    <td>{p.objectif.date_cible ? formatMois(p.objectif.date_cible.slice(0, 7)) : "—"} ({p.moisRestants} mois)</td>
+                    <td style={{ fontWeight: 600 }}>
+                      <span className="flex" style={{ gap: 8 }}>
+                        <span className="dot" style={{ background: p.objectif.couleur }} />
+                        {p.objectif.nom}
+                      </span>
+                    </td>
+                    <td>
+                      {p.objectif.date_cible ? formatMois(p.objectif.date_cible.slice(0, 7)) : "—"} ({p.moisRestants} mois)
+                    </td>
                     <td className="right num">{formatMontant(p.reste)}</td>
-                    <td className="right num" style={{ fontWeight: 700, color: "var(--accent)" }}>{formatMontant(p.requisMensuel)}</td>
+                    <td className="right num" style={{ fontWeight: 700 }}>
+                      {formatMontant(p.requisMensuel)}
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </div>
+        </Carte>
       )}
 
-      {/* Détail mensuel */}
-      <div className="card">
-        <h2>Détail mois par mois</h2>
+      <Carte titre="Détail mois par mois" ico="calendar">
         <div className="table-wrap">
           <table className="data">
             <thead>
@@ -157,36 +207,18 @@ export function Previsions() {
                   <td className="right num montant-pos">{formatMontant(m.revenus)}</td>
                   <td className="right num montant-neg">{formatMontant(m.charges)}</td>
                   <td className="right num montant-neg">{formatMontant(m.depensesVariables)}</td>
-                  <td className={"right num " + (m.resteAVivre >= 0 ? "montant-pos" : "montant-neg")}>{formatMontant(m.resteAVivre)}</td>
-                  <td className="right num" style={{ fontWeight: 700, color: m.soldeProjete < 0 ? "var(--red)" : undefined }}>{formatMontant(m.soldeProjete)}</td>
+                  <td className={"right num " + (m.resteAVivre >= 0 ? "montant-pos" : "montant-neg")}>
+                    {formatMontant(m.resteAVivre)}
+                  </td>
+                  <td className="right num" style={{ fontWeight: 700, color: m.soldeProjete < 0 ? "var(--red)" : undefined }}>
+                    {formatMontant(m.soldeProjete)}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-      </div>
+      </Carte>
     </>
-  );
-}
-
-function Tuile({
-  label,
-  value,
-  icon,
-  tone,
-}: {
-  label: string;
-  value: number;
-  icon: "trending-up" | "repeat" | "card" | "coins";
-  tone?: "pos" | "neg";
-}) {
-  return (
-    <div className="stat">
-      <div className="stat-top">
-        <span className="label">{label}</span>
-        <span className="stat-ico"><Icon name={icon} size={17} /></span>
-      </div>
-      <div className={"value num " + (tone ?? "")}>{formatMontant(value)}</div>
-    </div>
   );
 }

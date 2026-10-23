@@ -1,5 +1,5 @@
 import { AnimatePresence } from "motion/react";
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { useAppData } from "../state/AppDataContext";
 import { useToast } from "../state/ToastContext";
 import { TransactionModal } from "../components/TransactionModal";
@@ -12,6 +12,9 @@ import {
 } from "../db/repo";
 import { Menu, MenuActions, MenuChoix, type EntreeMenu } from "../components/ui/Menu";
 import { SelecteurMois } from "../components/ui/SelecteurMois";
+import { Indicateurs, Kpi, Vide } from "../components/ui/Page";
+import { differenceInCalendarDays, format, parseISO } from "date-fns";
+import { fr } from "date-fns/locale";
 import { useDemandeNavigation } from "../hooks/useActionDemandee";
 import { ouvrirJustificatif } from "../lib/justificatifs";
 import { soldeCompteAvecInitial } from "../lib/calculs";
@@ -19,6 +22,20 @@ import { scannerRecu } from "../lib/ocr";
 import { aujourdhui, formatDate, formatMontant } from "../lib/format";
 import { moisDisponibles } from "../lib/calculs";
 import type { Transaction, TxType } from "../db/types";
+
+/** « Aujourd'hui », « Hier » ou « jeudi 16 octobre ». */
+function libelleJour(iso: string): string {
+  const d = parseISO(iso);
+  const ecart = differenceInCalendarDays(new Date(), d);
+  const jour = format(d, "EEEE d MMMM", { locale: fr });
+  if (ecart === 0) return `Aujourd'hui · ${jour}`;
+  if (ecart === 1) return `Hier · ${jour}`;
+  return format(
+    d,
+    ecart < 0 || d.getFullYear() !== new Date().getFullYear() ? "EEEE d MMMM yyyy" : "EEEE d MMMM",
+    { locale: fr },
+  );
+}
 
 const LIBELLE_TYPE: Record<TxType, string> = {
   revenu: "Revenu",
@@ -208,6 +225,25 @@ export function Transactions() {
     });
   }, [transactions, fMois, fType, fCompte, fTexte, fMin, fMax, fPointee, catById]);
 
+  const resume = useMemo(
+    () => ({
+      entrees: filtres.filter((t) => t.type === "revenu").reduce((a, t) => a + t.montant, 0),
+      sorties: filtres.filter((t) => t.type === "depense").reduce((a, t) => a + t.montant, 0),
+      nombre: filtres.length,
+      pointees: filtres.filter((t) => t.pointee === 1).length,
+      aConfirmer: filtres.filter((t) => t.a_confirmer === 1).length,
+    }),
+    [filtres],
+  );
+  const netParJour = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const t of filtres) {
+      const v = t.type === "revenu" ? t.montant : t.type === "depense" ? -t.montant : 0;
+      m.set(t.date, (m.get(t.date) ?? 0) + v);
+    }
+    return m;
+  }, [filtres]);
+
   // Rapprochement : quand un compte précis est sélectionné, solde pointé vs solde réel.
   const rapprochement = useMemo(() => {
     if (fCompte === "tous") return null;
@@ -257,7 +293,44 @@ export function Transactions() {
         </div>
       </div>
 
-      <div className="card" style={{ marginBottom: 16 }}>
+      <Indicateurs>
+        <Kpi
+          label="Entrées"
+          ico="trending-up"
+          montant={resume.entrees}
+          ton="pos"
+          sous="revenus de la sélection"
+        />
+        <Kpi
+          label="Sorties"
+          ico="trending-down"
+          montant={resume.sorties}
+          ton="neg"
+          sous="dépenses de la sélection"
+        />
+        <Kpi
+          label="Solde net"
+          ico="coins"
+          montant={resume.entrees - resume.sorties}
+          ton={resume.entrees - resume.sorties >= 0 ? "pos" : "neg"}
+          sous="virements exclus"
+        />
+        <Kpi
+          label="Opérations"
+          ico="card"
+          valeur={resume.nombre}
+          sous={
+            <>
+              {resume.pointees} pointée{resume.pointees > 1 ? "s" : ""}
+              {resume.aConfirmer > 0 && (
+                <span className="db-kpi-alerte"> · {resume.aConfirmer} à confirmer</span>
+              )}
+            </>
+          }
+        />
+      </Indicateurs>
+
+      <div className="card pg-filtres">
         <div className="barre-filtres">
           <div className="champ-recherche">
             <Icon name="search" size={16} />
@@ -374,22 +447,21 @@ export function Transactions() {
 
       <div className="card">
         {filtres.length === 0 ? (
-          <div className="empty">
-            <div className="big">
-              <Icon name="card" size={44} strokeWidth={1.5} />
-            </div>
-            <p>
-              Aucune transaction. Ajoute ta première saisie — tu peux dater dans le passé pour ressaisir ton
-              historique.
-            </p>
-          </div>
+          <Vide
+            ico="card"
+            titre={transactions.length === 0 ? "Aucune transaction" : "Aucun résultat"}
+            texte={
+              transactions.length === 0
+                ? "Ajoute ta première saisie — tu peux dater dans le passé pour ressaisir ton historique."
+                : "Aucune opération ne correspond à ces filtres."
+            }
+          />
         ) : (
           <div className="table-wrap">
             <table className="data">
               <thead>
                 <tr>
                   <th title="Pointée (rapprochée avec le relevé)" style={{ width: 34 }}></th>
-                  <th>Date</th>
                   <th>Type</th>
                   <th>Description</th>
                   <th>Compte</th>
@@ -399,98 +471,112 @@ export function Transactions() {
                 </tr>
               </thead>
               <tbody>
-                {filtres.map((t) => {
+                {filtres.map((t, i) => {
                   const cat = t.categorie_id != null ? catById.get(t.categorie_id) : null;
+                  const nouveauJour = i === 0 || filtres[i - 1].date !== t.date;
+                  const net = netParJour.get(t.date) ?? 0;
                   return (
-                    <tr key={t.id} style={{ cursor: "pointer" }} onClick={() => setModal(t)}>
-                      <td onClick={(e) => e.stopPropagation()} style={{ textAlign: "center" }}>
-                        <button
-                          className="pointage"
-                          title={
-                            t.pointee === 1 ? "Pointée — cliquer pour dé-pointer" : "Marquer comme pointée"
-                          }
-                          aria-pressed={t.pointee === 1}
-                          onClick={async () => {
-                            await pointerTransaction(t.id, t.pointee !== 1);
-                            await rafraichir();
-                          }}
-                          style={{
-                            width: 18,
-                            height: 18,
-                            borderRadius: "50%",
-                            cursor: "pointer",
-                            border:
-                              "2px solid " + (t.pointee === 1 ? "var(--green)" : "var(--border-strong)"),
-                            background: t.pointee === 1 ? "var(--green)" : "transparent",
-                            display: "grid",
-                            placeItems: "center",
-                            color: "#fff",
-                            padding: 0,
-                          }}
-                        >
-                          {t.pointee === 1 && <Icon name="check" size={11} strokeWidth={3} />}
-                        </button>
-                      </td>
-                      <td>{formatDate(t.date)}</td>
-                      <td>
-                        <span className={`badge type-${t.type}`}>{LIBELLE_TYPE[t.type]}</span>
-                      </td>
-                      <td>
-                        {t.description || <span className="muted">—</span>}
-                        {t.justificatif_path && (
-                          <span
-                            title="Justificatif joint"
-                            style={{ marginLeft: 6, color: "var(--text-muted)" }}
-                          >
-                            <Icon name="paperclip" size={12} />
-                          </span>
-                        )}
-                        {t.a_confirmer === 1 && (
-                          <span className="badge payee_sans_justif" style={{ marginLeft: 8 }}>
-                            à confirmer
-                          </span>
-                        )}
-                      </td>
-                      <td>
-                        {t.type === "virement"
-                          ? `${compteNom.get(t.compte_id ?? -1) ?? "?"} → ${
-                              compteNom.get(t.compte_dest_id ?? -1) ?? "?"
-                            }`
-                          : (compteNom.get(t.compte_id ?? -1) ?? "—")}
-                      </td>
-                      <td>
-                        {cat ? (
-                          <span
-                            className="chip"
+                    <Fragment key={t.id}>
+                      {nouveauJour && (
+                        <tr className="pg-jour">
+                          <td colSpan={7}>
+                            <span>{libelleJour(t.date)}</span>
+                            <span className={`num ${net > 0 ? "pos" : net < 0 ? "neg" : ""}`}>
+                              {net > 0 ? "+ " : net < 0 ? "− " : ""}
+                              {formatMontant(Math.abs(net))}
+                            </span>
+                          </td>
+                        </tr>
+                      )}
+                      <tr style={{ cursor: "pointer" }} onClick={() => setModal(t)}>
+                        <td onClick={(e) => e.stopPropagation()} style={{ textAlign: "center" }}>
+                          <button
+                            className="pointage"
+                            title={
+                              t.pointee === 1 ? "Pointée — cliquer pour dé-pointer" : "Marquer comme pointée"
+                            }
+                            aria-pressed={t.pointee === 1}
+                            onClick={async () => {
+                              await pointerTransaction(t.id, t.pointee !== 1);
+                              await rafraichir();
+                            }}
                             style={{
-                              background: cat.couleur + "22",
-                              color: `color-mix(in srgb, ${cat.couleur} 66%, var(--text))`,
+                              width: 18,
+                              height: 18,
+                              borderRadius: "50%",
+                              cursor: "pointer",
+                              border:
+                                "2px solid " + (t.pointee === 1 ? "var(--green)" : "var(--border-strong)"),
+                              background: t.pointee === 1 ? "var(--green)" : "transparent",
+                              display: "grid",
+                              placeItems: "center",
+                              color: "#fff",
+                              padding: 0,
                             }}
                           >
-                            <span className="dot" style={{ background: cat.couleur }} />
-                            {cat.nom}
-                          </span>
-                        ) : (
-                          <span className="muted">—</span>
-                        )}
-                      </td>
-                      <td
-                        className={
-                          "right " +
-                          (t.type === "revenu"
-                            ? "montant-pos"
-                            : t.type === "depense"
-                              ? "montant-neg"
-                              : "montant-neutre")
-                        }
-                      >
-                        {t.type === "revenu" ? "+ " : t.type === "depense" ? "− " : ""}
-                        {formatMontant(t.montant)}
-                      </td>
-                      <td className="right" style={{ padding: "6px 8px" }}>
-                        <MenuActions label="Actions sur la transaction" elements={actionsLigne(t)} />
-                      </td>
-                    </tr>
+                            {t.pointee === 1 && <Icon name="check" size={11} strokeWidth={3} />}
+                          </button>
+                        </td>
+                        <td>
+                          <span className={`badge type-${t.type}`}>{LIBELLE_TYPE[t.type]}</span>
+                        </td>
+                        <td>
+                          {t.description || <span className="muted">—</span>}
+                          {t.justificatif_path && (
+                            <span
+                              title="Justificatif joint"
+                              style={{ marginLeft: 6, color: "var(--text-muted)" }}
+                            >
+                              <Icon name="paperclip" size={12} />
+                            </span>
+                          )}
+                          {t.a_confirmer === 1 && (
+                            <span className="badge payee_sans_justif" style={{ marginLeft: 8 }}>
+                              à confirmer
+                            </span>
+                          )}
+                        </td>
+                        <td>
+                          {t.type === "virement"
+                            ? `${compteNom.get(t.compte_id ?? -1) ?? "?"} → ${
+                                compteNom.get(t.compte_dest_id ?? -1) ?? "?"
+                              }`
+                            : (compteNom.get(t.compte_id ?? -1) ?? "—")}
+                        </td>
+                        <td>
+                          {cat ? (
+                            <span
+                              className="chip"
+                              style={{
+                                background: cat.couleur + "22",
+                                color: `color-mix(in srgb, ${cat.couleur} 66%, var(--text))`,
+                              }}
+                            >
+                              <span className="dot" style={{ background: cat.couleur }} />
+                              {cat.nom}
+                            </span>
+                          ) : (
+                            <span className="muted">—</span>
+                          )}
+                        </td>
+                        <td
+                          className={
+                            "right " +
+                            (t.type === "revenu"
+                              ? "montant-pos"
+                              : t.type === "depense"
+                                ? "montant-neg"
+                                : "montant-neutre")
+                          }
+                        >
+                          {t.type === "revenu" ? "+ " : t.type === "depense" ? "− " : ""}
+                          {formatMontant(t.montant)}
+                        </td>
+                        <td className="right" style={{ padding: "6px 8px" }}>
+                          <MenuActions label="Actions sur la transaction" elements={actionsLigne(t)} />
+                        </td>
+                      </tr>
+                    </Fragment>
                   );
                 })}
               </tbody>

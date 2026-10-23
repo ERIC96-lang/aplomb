@@ -2856,3 +2856,938 @@ textarea:focus-visible,
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* ==========================================================================
+   Briques communes à toutes les pages (langage « Le fil du mois »)
+   ========================================================================== */
+.db-hero.sans-calcul .db-hero-haut {
+  grid-template-columns: 1fr;
+}
+.db-carte-titre {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.db-carte-ico {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--brand-grad-soft);
+  color: var(--accent);
+}
+.pg-vide {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 34px 20px;
+  text-align: center;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+}
+.pg-vide p {
+  margin: 0 0 6px;
+  max-width: 420px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.pg-vide-ico {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 4px;
+  border-radius: 14px;
+  background: var(--brand-grad-soft);
+  color: var(--accent);
+  animation: poser 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.15s backwards;
+}
+/* Barre de répartition empilée (comptes, charges…). */
+.pg-pile {
+  display: flex;
+  height: 10px;
+  margin-top: 20px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--surface-3);
+}
+.pg-pile > span {
+  height: 100%;
+  transform-origin: left center;
+  animation: remplir 1s cubic-bezier(0.22, 1, 0.36, 1) 0.2s backwards;
+}
+.pg-pile > span + span {
+  border-left: 2px solid var(--surface);
+}
+.pg-pile-legende {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.pg-pile-legende span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.pg-pile-legende strong {
+  color: var(--text);
+  font-weight: 650;
+}
+/* Rangées de 3 cartes. */
+.db-rangee.tiers {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+@media (max-width: 1250px) {
+  .db-rangee.tiers {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 900px) {
+  .db-rangee.tiers {
+    grid-template-columns: 1fr;
+  }
+}
+.page-anim .db-rangee > :nth-child(3) {
+  animation-delay: 0.14s;
+}
+.page-anim .db-rangee > :nth-child(4) {
+  animation-delay: 0.2s;
+}
+.page-anim .db-rangee > :nth-child(n + 5) {
+  animation-delay: 0.26s;
+}
+
+/* --- Comptes ------------------------------------------------------------- */
+.pg-compte {
+  display: flex;
+  flex-direction: column;
+}
+.pg-compte-tete {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+.pg-compte-ico {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: color-mix(in srgb, currentColor 13%, transparent);
+}
+.pg-compte-nom {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 15px;
+  font-weight: 700;
+}
+.pg-compte-type {
+  font-size: 12px;
+}
+.pg-compte-solde {
+  margin: 16px 0 2px;
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 770;
+  letter-spacing: -0.03em;
+}
+.pg-compte-solde.neg {
+  color: var(--neg);
+}
+.pg-compte-mois {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.pg-compte-mois span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.pg-compte-mois em {
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.pg-compte-mois strong {
+  font-size: 14px;
+}
+.pg-compte-mois .pos {
+  color: var(--pos);
+}
+.pg-compte-lien {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  align-self: flex-start;
+  margin-top: 12px;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 0.15s, gap 0.2s;
+}
+.pg-compte-lien:hover {
+  color: var(--text);
+  gap: 7px;
+}
+
+/* --- Transactions ---------------------------------------------------------- */
+.pg-filtres {
+  margin: 18px 0 16px;
+}
+table.data tbody tr.pg-jour td {
+  padding: 16px 12px 7px;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+}
+table.data tbody tr.pg-jour:hover td {
+  background: transparent;
+}
+table.data tbody tr.pg-jour:first-child td {
+  padding-top: 4px;
+}
+.pg-jour td {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.pg-jour td > span:first-child::first-letter {
+  text-transform: uppercase;
+}
+.pg-jour td {
+  cursor: default;
+}
+.pg-jour td > span + span {
+  float: right;
+  letter-spacing: 0;
+}
+.pg-jour .pos {
+  color: var(--pos);
+}
+.pg-jour .neg {
+  color: var(--text-muted);
+}
+
+/* --- Charges fixes ----------------------------------------------------------- */
+.pg-cout {
+  display: inline-flex;
+  gap: 18px;
+}
+.pg-cout span {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+.pg-cout em {
+  font-style: normal;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.pg-cout strong {
+  font-size: 14px;
+}
+
+/* --- Budgets ------------------------------------------------------------------ */
+.pg-rythme {
+  position: relative;
+  margin-top: 26px;
+}
+.pg-rythme.fin {
+  margin: 12px 0 14px;
+}
+.pg-rythme-piste {
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--surface-3);
+}
+.pg-rythme.fin .pg-rythme-piste {
+  height: 8px;
+}
+.pg-rythme-barre {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  transform-origin: left center;
+  animation: remplir 1s cubic-bezier(0.22, 1, 0.36, 1) 0.2s backwards;
+}
+/* Fil à plomb : la part du mois écoulée. */
+.pg-rythme-fil {
+  position: absolute;
+  top: -5px;
+  bottom: -5px;
+  width: 2px;
+  margin-left: -1px;
+  border-radius: 2px;
+  background: var(--text);
+  animation: poser 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.7s backwards;
+}
+.pg-rythme.fin .pg-rythme-fil {
+  top: -4px;
+  bottom: -4px;
+  opacity: 0.7;
+}
+.pg-rythme-fil em {
+  position: absolute;
+  bottom: calc(100% + 3px);
+  left: 50%;
+  transform: translateX(-50%);
+  font-style: normal;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.pg-budget {
+  display: flex;
+  flex-direction: column;
+}
+.pg-budget-tete {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 32px;
+}
+.pg-budget-nom {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 700;
+}
+.pg-budget-montant {
+  margin-top: 10px;
+  font-size: 13.5px;
+}
+.pg-budget-montant > span:first-child {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 760;
+  letter-spacing: -0.02em;
+}
+.pg-budget-pied {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: auto;
+  font-size: 12px;
+}
+.pg-ajout {
+  margin-top: 18px;
+}
+
+/* --- Objectifs ---------------------------------------------------------------- */
+.pg-objectif {
+  display: flex;
+  flex-direction: column;
+}
+.pg-obj-nom {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+.pg-obj-corps {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 14px 0 6px;
+}
+.pg-anneau {
+  position: relative;
+  flex-shrink: 0;
+  width: 72px;
+  height: 72px;
+}
+.pg-anneau-fond {
+  fill: none;
+  stroke: var(--surface-3);
+  stroke-width: 7;
+}
+.pg-anneau > span {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  font-weight: 750;
+}
+.pg-obj-chiffres {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  font-size: 12.5px;
+}
+.pg-obj-montant {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 770;
+  letter-spacing: -0.025em;
+}
+.pg-obj-atteint {
+  color: var(--green);
+  font-weight: 650;
+}
+
+/* --- Espacements communs ----------------------------------------------------- */
+.page-anim > :is(.db-hero, .db-kpis, .db-rangee, .pg-espace, .pg-alerte) {
+  margin-bottom: 18px;
+}
+.pg-alerte {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13.5px;
+}
+.pg-alerte-ico {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--amber) 15%, transparent);
+  color: var(--amber);
+}
+
+/* --- Prévisions --------------------------------------------------------------- */
+.pg-scenarios {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 20px;
+}
+.pg-scenario {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.pg-scenario:hover {
+  border-color: var(--border-strong);
+}
+.pg-scenario.actif {
+  border-color: var(--accent);
+  background: var(--brand-grad-soft);
+}
+.pg-scenario em {
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.pg-scenario strong {
+  font-family: var(--font-display);
+  font-size: 18px;
+}
+.pg-scenario span {
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+/* --- Échéancier --------------------------------------------------------------- */
+.pg-barres {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  margin-top: 22px;
+}
+.pg-barre-mois {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.pg-barre-mois > span {
+  font-size: 11px;
+  font-weight: 650;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.pg-barre-piste {
+  display: flex;
+  align-items: flex-end;
+  width: 100%;
+  max-width: 54px;
+  height: 90px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.pg-barre-piste > span {
+  width: 100%;
+  border-radius: 10px;
+  background: linear-gradient(180deg, var(--accent), color-mix(in srgb, var(--accent) 45%, transparent));
+  transform-origin: bottom;
+  animation: monter 0.9s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+@keyframes monter {
+  from {
+    transform: scaleY(0);
+  }
+}
+.pg-barre-mois em {
+  font-style: normal;
+  font-size: 11.5px;
+  font-weight: 650;
+  color: var(--text-dim);
+}
+.pg-barre-mois em::first-letter {
+  text-transform: uppercase;
+}
+/* Chronologie verticale : un fil, un point par mois. */
+.pg-chrono {
+  position: relative;
+  padding-left: 22px;
+}
+.pg-chrono::before {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--border-strong);
+}
+.pg-chrono-mois + .pg-chrono-mois {
+  margin-top: 20px;
+}
+.pg-chrono-tete {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.pg-chrono-tete strong {
+  font-size: 14px;
+}
+.pg-chrono-tete strong::first-letter {
+  text-transform: uppercase;
+}
+.pg-chrono-tete .num {
+  font-weight: 700;
+}
+.pg-chrono-point {
+  position: absolute;
+  left: -22px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid var(--surface);
+  background: var(--accent);
+  box-shadow: 0 0 0 1.5px var(--accent);
+}
+.pg-chrono ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.pg-chrono li {
+  display: grid;
+  grid-template-columns: 62px minmax(0, 1fr) auto minmax(0, 150px) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+}
+.pg-chrono-nom {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+.pg-chrono-compte {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12.5px;
+}
+.pg-chrono-montant {
+  font-weight: 650;
+  min-width: 90px;
+  text-align: right;
+}
+
+/* --- Points d'analyse (tableau de bord, Analyse) ------------------------------ */
+.pg-insight {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-2);
+}
+.pg-insight-ico {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  color: var(--ton);
+  background: color-mix(in srgb, var(--ton) 15%, transparent);
+}
+.pg-insight-txt {
+  flex: 1;
+  min-width: 0;
+}
+.pg-insight-titre {
+  font-size: 14px;
+  font-weight: 650;
+}
+.pg-insight-detail {
+  margin-top: 2px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+.pg-insight-lien {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  align-self: center;
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--text-muted);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.pg-insight-lien:hover {
+  color: var(--text);
+}
+.pg-unite {
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--text-muted);
+}
+.pg-filtre-niveaux {
+  margin-top: 18px;
+  overflow-x: auto;
+}
+
+/* --- Suggestions ------------------------------------------------------------- */
+.pg-suggestion {
+  display: flex;
+  flex-direction: column;
+}
+.pg-mois-detectes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 12px 0 2px;
+}
+.pg-mois-detectes span {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.pg-suggestion-actions {
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 16px;
+}
+
+/* --- Factures : formulaire + aperçu papier ---------------------------------- */
+.pg-facture {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 18px;
+  align-items: start;
+}
+.pg-facture-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+}
+.pg-memo {
+  margin-top: 8px;
+  font-size: 11.5px;
+}
+.pg-lignes td {
+  padding: 8px 6px;
+}
+.pg-facture-apercu {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.pg-facture-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pg-facture-actions .btn {
+  justify-content: center;
+}
+/* La feuille reste blanche dans les deux thèmes : c'est un aperçu du PDF. */
+.pg-papier {
+  position: relative;
+  overflow: hidden;
+  padding: 22px 20px 20px;
+  border-radius: 14px;
+  background: #ffffff;
+  color: #1f1c19;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12), 0 18px 40px rgba(0, 0, 0, 0.22);
+  font-size: 11.5px;
+  animation: poser 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.1s backwards;
+}
+.pg-papier-tete {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.pg-papier-type {
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.pg-papier-num {
+  margin-top: 2px;
+  color: #6b655d;
+  font-weight: 600;
+}
+.pg-papier-date {
+  color: #6b655d;
+}
+.pg-papier-fil {
+  height: 2px;
+  margin: 14px 0;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #1f1c19, #1f1c19 30%, #e7e2da 30%);
+}
+.pg-papier-parties {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.pg-papier-parties div {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.pg-papier-parties em {
+  font-style: normal;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #928c82;
+}
+.pg-papier-parties strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pg-papier-lignes {
+  margin-top: 14px;
+  border-top: 1px solid #ebe6de;
+}
+.pg-papier-lignes div,
+.pg-papier-totaux div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 0;
+}
+.pg-papier-lignes div {
+  border-bottom: 1px solid #f1ede7;
+}
+.pg-papier-lignes span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pg-papier-totaux {
+  margin: 10px 0 0 auto;
+  width: 62%;
+  color: #5c574f;
+}
+.pg-papier-ttc {
+  margin-top: 4px;
+  padding-top: 8px !important;
+  border-top: 1.5px solid #1f1c19;
+  color: #1f1c19;
+  font-size: 13px;
+  font-weight: 800;
+}
+.pg-papier-tampon {
+  position: absolute;
+  top: 54px;
+  right: 18px;
+  padding: 3px 10px;
+  border: 2px solid #2f8f5f;
+  border-radius: 6px;
+  color: #2f8f5f;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  transform: rotate(-8deg);
+  opacity: 0.85;
+}
+@media (max-width: 1100px) {
+  .pg-facture {
+    grid-template-columns: 1fr;
+  }
+  .pg-facture-apercu {
+    position: static;
+  }
+}
+
+/* --- Import : étapes reliées par un fil ------------------------------------- */
+.pg-etapes {
+  display: flex;
+  gap: 0;
+  margin: 0 0 18px;
+  padding: 0;
+  list-style: none;
+}
+.pg-etapes li {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+.pg-etapes li + li::before {
+  content: "";
+  flex: 0 0 28px;
+  height: 2px;
+  margin-right: 4px;
+  border-radius: 2px;
+  background: var(--border-strong);
+}
+.pg-etapes li.faite + li::before,
+.pg-etapes li.active::before {
+  background: var(--accent);
+}
+.pg-etape-num {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1.5px solid var(--border-strong);
+  font-size: 12px;
+  font-weight: 750;
+}
+.pg-etapes li.active {
+  color: var(--text);
+}
+.pg-etapes li.active .pg-etape-num {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-contrast);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+.pg-etapes li.faite {
+  color: var(--text-muted);
+}
+.pg-etapes li.faite .pg-etape-num {
+  border-color: var(--green);
+  background: var(--green);
+  color: #fff;
+}
+.pg-colonnes {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+.pg-colonnes .choix {
+  width: 100%;
+  justify-content: space-between;
+}
+.pg-facture-apercu .choix {
+  width: 100%;
+  justify-content: space-between;
+}
+@media (max-width: 1250px) {
+  .pg-colonnes {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* --- Paramètres : rubriques régulières --------------------------------------- */
+.onglet-panneau {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.onglet-panneau > .card,
+.onglet-panneau > .grid {
+  margin: 0 !important;
+}
+.onglet-panneau .card > h2:first-child {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.onglet-panneau .card > h2:first-child::before {
+  content: "";
+  width: 4px;
+  height: 16px;
+  border-radius: 3px;
+  background: var(--accent);
+}

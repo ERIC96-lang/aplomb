@@ -8,8 +8,12 @@ import { MenuActions } from "../components/ui/Menu";
 import { useDemandeNavigation } from "../hooks/useActionDemandee";
 import { Icon } from "../components/Icon";
 import { Defilant } from "../components/Defilant";
-import { soldeCompteAvecInitial } from "../lib/calculs";
-import { formatMontant, aujourdhui } from "../lib/format";
+import { soldeCompteAvecInitial, totauxMois } from "../lib/calculs";
+import { pointsSoldeMensuel } from "../lib/series";
+import { addDays, format } from "date-fns";
+import { Bandeau, Carte, LigneCalcul, Rangee, TotalCalcul, Vide } from "../components/ui/Page";
+import { Sparkline } from "../components/dashboard/Sparkline";
+import { formatMontant, aujourdhui, moisCourant } from "../lib/format";
 import {
   archiverCompte,
   creerCompte,
@@ -18,6 +22,9 @@ import {
   supprimerCompte,
 } from "../db/repo";
 import type { Compte, CompteType } from "../db/types";
+
+// Couleurs des comptes (barre de répartition, icônes, tendances).
+const COULEURS = ["var(--accent)", "var(--teal)", "var(--blue)", "var(--amber)", "var(--green)", "var(--red)"];
 
 const TYPES: { value: CompteType; label: string }[] = [
   { value: "courant", label: "Courant" },
@@ -66,6 +73,31 @@ export function Comptes() {
     if (d.action === "compte") setEdit("new");
   });
 
+  const soldes = useMemo(
+    () => comptes.map((c) => ({ c, solde: soldeCompteAvecInitial(c, transactions) })),
+    [comptes, transactions]
+  );
+  const patrimoine = soldes.reduce((a, x) => a + x.solde, 0);
+  const positifTotal = soldes.reduce((a, x) => a + Math.max(0, x.solde), 0) || 1;
+  const decouverts = soldes.filter((x) => x.solde < 0);
+  const parType = soldes.reduce<Partial<Record<CompteType, number>>>((a, x) => {
+    a[x.c.type] = (a[x.c.type] ?? 0) + x.solde;
+    return a;
+  }, {});
+  // Variation sur 30 jours : effet net des opérations datées des 30 derniers jours.
+  const variation30 = useMemo(() => {
+    const depuis = format(addDays(new Date(), -30), "yyyy-MM-dd");
+    const ids = new Set(comptes.map((c) => c.id));
+    return transactions
+      .filter((t) => t.date >= depuis && t.a_confirmer !== 1)
+      .reduce((a, t) => {
+        if (t.type === "revenu" && t.compte_id != null && ids.has(t.compte_id)) return a + t.montant;
+        if (t.type === "depense" && t.compte_id != null && ids.has(t.compte_id)) return a - t.montant;
+        return a;
+      }, 0);
+  }, [comptes, transactions]);
+  const tendance = (id: number) => pointsSoldeMensuel(comptes, transactions, id, 12).map((p) => p.solde);
+
   async function purgerVides() {
     for (const a of archivesVides) await supprimerCompte(a.id);
     await Promise.all([rafraichir(), chargerArchives()]);
@@ -85,103 +117,131 @@ export function Comptes() {
       </div>
 
       {comptes.length === 0 ? (
-        <div className="card empty">
-          <div className="big">
-            <Icon name="bank" size={44} strokeWidth={1.5} />
-          </div>
-          <p>Aucun compte pour l'instant. Commence par en créer un.</p>
-        </div>
+        <Carte>
+          <Vide ico="bank" titre="Aucun compte pour l'instant" texte="Ajoute ton compte courant, ton livret, tes espèces… avec leur solde actuel : tout le reste de l'app s'appuie dessus.">
+            <button className="btn primary" onClick={() => setEdit("new")}>
+              <Icon name="plus" size={16} /> Créer un compte
+            </button>
+          </Vide>
+        </Carte>
       ) : (
-        <div className="grid grid-auto">
-          {comptes.map((c) => {
-            const solde = soldeCompteAvecInitial(c, transactions);
-            return (
-              <div className="card" key={c.id}>
-                <div className="flex-between">
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: 16 }}>{c.nom}</div>
-                    <div className="muted" style={{ fontSize: 12.5, marginTop: 2 }}>
-                      {TYPES.find((t) => t.value === c.type)?.label}
+        <>
+          <Bandeau
+            surtitre="Patrimoine total"
+            montant={patrimoine}
+            humeur={decouverts.length > 0 ? "risque" : "ok"}
+            statut={decouverts.length > 0 ? `${decouverts.length} compte${decouverts.length > 1 ? "s" : ""} à découvert` : "Tous tes comptes sont positifs"}
+            phrase={
+              <>
+                {comptes.length} compte{comptes.length > 1 ? "s" : ""} actif{comptes.length > 1 ? "s" : ""} ·{" "}
+                <strong className="num">{variation30 >= 0 ? "+ " : "− "}{formatMontant(Math.abs(variation30))}</strong> sur 30 jours
+              </>
+            }
+            calcul={
+              <>
+                {TYPES.filter((t) => parType[t.value] !== undefined).map((t) => (
+                  <LigneCalcul key={t.value} label={t.label} valeur={parType[t.value]!} />
+                ))}
+                <TotalCalcul label="Total" valeur={patrimoine} />
+              </>
+            }
+          >
+            <div className="pg-pile" aria-hidden="true">
+              {soldes.map(({ c, solde }, i) =>
+                solde > 0 ? (
+                  <span key={c.id} style={{ width: `${(solde / positifTotal) * 100}%`, background: COULEURS[i % COULEURS.length] }} />
+                ) : null
+              )}
+            </div>
+            <div className="pg-pile-legende">
+              {soldes.map(({ c, solde }, i) => (
+                <span key={c.id}>
+                  <span className="dot" style={{ background: COULEURS[i % COULEURS.length] }} />
+                  {c.nom} <strong className="num">{positifTotal > 0 && solde > 0 ? `${Math.round((solde / positifTotal) * 100)} %` : formatMontant(solde)}</strong>
+                </span>
+              ))}
+            </div>
+          </Bandeau>
+
+          <Rangee type="tiers">
+            {soldes.map(({ c, solde }, i) => {
+              const mois = totauxMois(transactions, moisCourant(), c.id);
+              return (
+                <section className="card pg-compte" key={c.id}>
+                  <div className="pg-compte-tete">
+                    <span className="pg-compte-ico" style={{ color: COULEURS[i % COULEURS.length] }}>
+                      <Icon name={c.type === "epargne" ? "coins" : "wallet"} size={19} />
+                    </span>
+                    <div>
+                      <div className="pg-compte-nom">{c.nom}</div>
+                      <div className="dim pg-compte-type">{TYPES.find((t) => t.value === c.type)?.label}</div>
                     </div>
+                    <MenuActions
+                      label={`Actions pour ${c.nom}`}
+                      elements={[
+                        { id: "modifier", label: "Modifier", ico: "edit", description: "Nom, type, solde initial", action: () => setEdit(c) },
+                        {
+                          id: "depense",
+                          label: "Nouvelle opération",
+                          ico: "plus",
+                          description: "Dépense, revenu ou virement sur ce compte",
+                          action: () => navigate("/transactions", { state: { action: "depense", compte: c.id } }),
+                        },
+                        { separateur: true },
+                        {
+                          id: "archiver",
+                          label: "Archiver",
+                          ico: "folder",
+                          description: "Masqué, historique conservé",
+                          danger: true,
+                          action: async () => {
+                            await archiverCompte(c.id, true);
+                            await rafraichir();
+                            toast("Compte archivé");
+                          },
+                        },
+                      ]}
+                    />
                   </div>
-                  <span
-                    style={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: 11,
-                      display: "grid",
-                      placeItems: "center",
-                      background: "var(--brand-grad-soft)",
-                      color: "var(--accent)",
-                    }}
-                  >
-                    <Icon name={c.type === "epargne" ? "coins" : "wallet"} size={20} />
-                  </span>
-                </div>
-                <div
-                  className="value"
-                  style={{
-                    fontSize: 28,
-                    fontWeight: 700,
-                    marginTop: 14,
-                    color: solde < 0 ? "var(--red)" : "var(--text)",
-                  }}
-                >
-                  <Defilant valeur={solde} />
-                </div>
-                <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>
-                  Solde initial : {formatMontant(c.solde_initial)}
-                </div>
-                <div className="flex-between" style={{ marginTop: 14 }}>
+                  <div className={`pg-compte-solde num ${solde < 0 ? "neg" : ""}`}>
+                    <Defilant valeur={solde} />
+                  </div>
+                  <Sparkline valeurs={tendance(c.id)} couleur={COULEURS[i % COULEURS.length]} />
+                  <div className="pg-compte-mois">
+                    <span>
+                      <em>Entrées du mois</em>
+                      <strong className="num pos">+ {formatMontant(mois.revenus)}</strong>
+                    </span>
+                    <span>
+                      <em>Sorties du mois</em>
+                      <strong className="num">− {formatMontant(mois.depenses)}</strong>
+                    </span>
+                  </div>
                   <button
-                    className="btn sm ghost"
+                    className="pg-compte-lien"
                     onClick={() => navigate("/transactions", { state: { compte: c.id } })}
                   >
                     Voir les opérations <Icon name="chevron-right" size={14} />
                   </button>
-                  <MenuActions
-                    label={`Actions pour ${c.nom}`}
-                    elements={[
-                      { id: "modifier", label: "Modifier", ico: "edit", description: "Nom, type, solde initial", action: () => setEdit(c) },
-                      {
-                        id: "depense",
-                        label: "Nouvelle opération",
-                        ico: "plus",
-                        description: "Dépense, revenu ou virement sur ce compte",
-                        action: () => navigate("/transactions", { state: { action: "depense", compte: c.id } }),
-                      },
-                      { separateur: true },
-                      {
-                        id: "archiver",
-                        label: "Archiver",
-                        ico: "folder",
-                        description: "Masqué, historique conservé",
-                        danger: true,
-                        action: async () => {
-                          await archiverCompte(c.id, true);
-                          await rafraichir();
-                          toast("Compte archivé");
-                        },
-                      },
-                    ]}
-                  />
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                </section>
+              );
+            })}
+          </Rangee>
+        </>
       )}
 
       {archives.length > 0 && (
-        <div className="card" style={{ marginTop: 24 }}>
-          <div className="flex-between" style={{ marginBottom: 12 }}>
-            <h2 style={{ margin: 0 }}>Comptes archivés ({archives.length})</h2>
-            {archivesVides.length > 0 && (
+        <Carte
+          titre={`Comptes archivés (${archives.length})`}
+          ico="folder"
+          action={
+            archivesVides.length > 0 ? (
               <button className="btn sm" onClick={purgerVides}>
                 <Icon name="trash" size={14} /> Supprimer les {archivesVides.length} compte(s) vide(s)
               </button>
-            )}
-          </div>
+            ) : undefined
+          }
+        >
           <div className="table-wrap">
             <table className="data">
               <thead>
@@ -189,7 +249,7 @@ export function Comptes() {
                   <th>Nom</th>
                   <th>Type</th>
                   <th></th>
-                  <th className="right">Actions</th>
+                  <th style={{ width: 44 }} aria-label="Actions"></th>
                 </tr>
               </thead>
               <tbody>
@@ -199,34 +259,36 @@ export function Comptes() {
                     <td>{TYPES.find((t) => t.value === a.type)?.label}</td>
                     <td>
                       {estVide(a.id) ? (
-                        <span className="chip" style={{ background: "var(--surface-2)" }}>vide</span>
+                        <span className="chip etat-inactif">vide</span>
                       ) : (
                         <span className="muted" style={{ fontSize: 12 }}>a des transactions</span>
                       )}
                     </td>
-                    <td className="right">
-                      <div className="flex" style={{ justifyContent: "flex-end", gap: 6 }}>
-                        <button
-                          className="btn sm"
-                          onClick={async () => {
-                            await archiverCompte(a.id, false);
-                            await Promise.all([rafraichir(), chargerArchives()]);
-                            toast("Compte restauré");
-                          }}
-                        >
-                          Restaurer
-                        </button>
-                        <button className="btn sm danger" onClick={() => supprimer(a)}>
-                          <Icon name="trash" size={13} />
-                        </button>
-                      </div>
+                    <td className="right" style={{ padding: "6px 8px" }}>
+                      <MenuActions
+                        label={`Actions pour ${a.nom}`}
+                        elements={[
+                          {
+                            id: "restaurer",
+                            label: "Restaurer",
+                            ico: "undo",
+                            action: async () => {
+                              await archiverCompte(a.id, false);
+                              await Promise.all([rafraichir(), chargerArchives()]);
+                              toast("Compte restauré");
+                            },
+                          },
+                          { separateur: true },
+                          { id: "supprimer", label: "Supprimer", ico: "trash", danger: true, action: () => void supprimer(a) },
+                        ]}
+                      />
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </div>
+        </Carte>
       )}
 
       <AnimatePresence>

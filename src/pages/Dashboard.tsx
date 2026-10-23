@@ -34,7 +34,7 @@ import { MenuChoix } from "../components/ui/Menu";
 import { Segmente } from "../components/ui/Segmente";
 import { SelecteurMois } from "../components/ui/SelecteurMois";
 import { Defilant } from "../components/Defilant";
-import { Sparkline } from "../components/dashboard/Sparkline";
+import { Kpi, LigneCalcul } from "../components/ui/Page";
 import { FilDuMois, type EtatEvenement, type EvenementFil } from "../components/dashboard/FilDuMois";
 import { pointsFluxMensuel, pointsSoldeJournalier, pointsSoldeMensuel } from "../lib/series";
 import { formatDate, formatMontant, formatMois, moisCourant } from "../lib/format";
@@ -320,29 +320,29 @@ export function Dashboard() {
 
     indicateurs: (
       <div className="db-kpis">
-        <Indicateur
+        <Kpi
           label="Revenus"
           ico="trending-up"
-          valeur={totaux.revenus}
+          montant={totaux.revenus}
           ton="pos"
           delta={variationPct(totaux.revenus, totauxPrec.revenus)}
           serie={flux6.map((p) => p.revenus)}
           couleur="var(--green)"
         />
-        <Indicateur
+        <Kpi
           label="Dépenses"
           ico="trending-down"
-          valeur={totaux.depenses}
+          montant={totaux.depenses}
           ton="neg"
           delta={variationPct(totaux.depenses, totauxPrec.depenses)}
           inverse
           serie={flux6.map((p) => p.depenses)}
           couleur="var(--red)"
         />
-        <Indicateur
+        <Kpi
           label="Épargne du mois"
           ico="coins"
-          valeur={totaux.solde}
+          montant={totaux.solde}
           ton={totaux.solde >= 0 ? "pos" : "neg"}
           sous={totaux.revenus > 0 ? `${Math.round(tauxEpargne * 100)} % des revenus` : undefined}
           serie={flux6.map((p) => p.epargne)}
@@ -630,71 +630,6 @@ export function Dashboard() {
         )}
       </AnimatePresence>
     </>
-  );
-}
-
-function LigneCalcul({ label, valeur, aide }: { label: string; valeur: number; aide?: string }) {
-  return (
-    <div className="db-calcul-ligne">
-      <span>
-        {label}
-        {aide && <em>{aide}</em>}
-      </span>
-      <span className={`num ${valeur < 0 ? "neg" : ""}`}>
-        {valeur < 0 ? "− " : ""}
-        {formatMontant(Math.abs(valeur))}
-      </span>
-    </div>
-  );
-}
-
-function Indicateur({
-  label,
-  ico,
-  valeur,
-  ton,
-  delta,
-  inverse,
-  sous,
-  serie,
-  couleur,
-}: {
-  label: string;
-  ico: IconName;
-  valeur: number;
-  ton: "pos" | "neg";
-  delta?: number | null;
-  /** Hausse = mauvais (dépenses). */
-  inverse?: boolean;
-  sous?: string;
-  serie: number[];
-  couleur: string;
-}) {
-  let badge: ReactNode = null;
-  if (delta != null && isFinite(delta)) {
-    const plat = Math.abs(delta) < 0.5;
-    const bon = inverse ? delta < 0 : delta > 0;
-    badge = (
-      <span className={`delta ${plat ? "flat" : bon ? "up" : "down"}`}>
-        {plat ? "→" : delta > 0 ? "▲" : "▼"} {Math.abs(delta).toFixed(0)} %
-      </span>
-    );
-  }
-  return (
-    <div className="db-kpi">
-      <div className="db-kpi-tete">
-        <span>{label}</span>
-        <span className="db-kpi-ico"><Icon name={ico} size={16} /></span>
-      </div>
-      <div className={`db-kpi-valeur num ${ton}`}>
-        <Defilant valeur={valeur} />
-      </div>
-      <Sparkline valeurs={serie} couleur={couleur} />
-      <div className="db-kpi-pied">
-        {badge}
-        <span>{sous ?? "vs mois précédent"}</span>
-      </div>
-    </div>
   );
 }
 

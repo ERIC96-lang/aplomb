@@ -20,6 +20,14 @@ const LIBELLE_ETAT: Record<EtatEvenement, string> = {
   paie: "revenu attendu",
 };
 
+const LEGENDE: { etat: EtatEvenement; label: string }[] = [
+  { etat: "paie", label: "Paie" },
+  { etat: "paye", label: "Payée" },
+  { etat: "ailleurs", label: "Hors comptes" },
+  { etat: "avenir", label: "À venir" },
+  { etat: "retard", label: "En retard" },
+];
+
 /**
  * « Le fil du mois » : une ligne du 1er au dernier jour, le fil à plomb sur
  * aujourd'hui, la paie et chaque charge fixe placées à leur date.
@@ -99,10 +107,14 @@ export function FilDuMois({
         ))}
       </div>
       <div className="fil-legende">
-        <span><i className="fil-point paie mini"><Icon name="trending-up" size={8} strokeWidth={3} /></i> Paie</span>
-        <span><i className="fil-point paye mini" /> Payée</span>
-        <span><i className="fil-point avenir mini" /> À venir</span>
-        <span><i className="fil-point retard mini" /> En retard</span>
+        {LEGENDE.filter((l) => evenements.some((e) => e.etat === l.etat)).map((l) => (
+          <span key={l.etat}>
+            <i className={`fil-point ${l.etat} mini`}>
+              {l.etat === "paie" && <Icon name="trending-up" size={8} strokeWidth={3} />}
+            </i>{" "}
+            {l.label}
+          </span>
+        ))}
       </div>
     </div>
   );
